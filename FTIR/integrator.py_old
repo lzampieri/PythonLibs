@@ -1,0 +1,168 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import savgol_filter
+from scipy.optimize import curve_fit
+from plots import splt
+from tqdm import tqdm
+from uncertainties import correlated_values
+
+def compute_ozone( wn, sp, plot = False ):
+    # Ozone-related area
+    # ozone_idx = ( wn > 1000 ) * ( wn < 1150 )
+    ozone_idx = ( wn > 950 ) * ( wn < 1100 )
+    ozone_wn = wn[ ozone_idx ]
+    ozone_0wn = ozone_wn - ozone_wn[ 0 ]
+    ozone_sp = sp[ ozone_idx ]
+
+    # Detect if Ozone is up or down
+    ozone_central_idx = np.max( np.where( wn < 1057 )[0] )
+    ozone_a, _, _ = np.polyfit( wn[ ozone_central_idx - 4 : ozone_central_idx + 4 ], sp[ ozone_central_idx - 4 : ozone_central_idx + 4 ], 2 )
+    ozone_direction = -1 if ozone_a > 0 else +1
+
+    # Fitting function
+    ozone_fitfun = lambda x, m, q, A1, s1, A2, s2 : A1 * np.exp( - ( x - 1057 + ozone_wn[ 0 ] )**2 / s1 ) + A2 * np.exp( - ( x - 1030 + ozone_wn[ 0 ] )**2 / s2 ) + m * x + q
+    p0 = [ ( ozone_sp[-1] - ozone_sp[0] ) / ( ozone_wn[-1] - ozone_wn[0] ), ozone_sp[0], np.ptp( ozone_sp ) * ozone_direction, 15, np.ptp( ozone_sp ) * ozone_direction, 100 ]
+    bounds = (
+        # m,       q,       A1,      s1,      A2,      s2,    
+        [ -np.inf, -np.inf, -np.inf,  0     , -np.inf,  0     ],
+        [  np.inf,  np.inf,  np.inf,  1000  ,  np.inf,  1000  ]
+    )
+    
+    try:
+        p, pcov = curve_fit( ozone_fitfun, ozone_0wn, ozone_sp, p0, bounds=bounds )
+    except (RuntimeError, RuntimeWarning):
+        p = p0
+        p[2] = 0
+        p[4] = 0
+        pcov = np.zeros( ( len( p0 ), len( p0 ) ) )
+
+    ( m, q ) = correlated_values( p[0:2], pcov[0:2,0:2] )
+
+    # Ozone-integrating area
+    ozone_int_idx = ( wn > 1000 ) * ( wn < 1070 )
+    # ozone_int_idx = ( wn > 990 ) * ( wn < 1070 )
+    ozone_int_wn = wn[ ozone_int_idx ] - ozone_wn[ 0 ]
+    integral = np.trapz( sp[ ozone_int_idx ] - m * ozone_int_wn - q,  wn[ ozone_int_idx ] )
+
+    fit_info = { 'm': p[0], 'x': np.mean( ozone_int_wn ) + ozone_wn[ 0 ], 'y': m * np.mean( ozone_int_wn ) + q }
+
+    if( plot ):
+        plt.plot( ozone_0wn, ozone_sp )
+        # plt.plot( fit_info['x'] - ozone_wn[ 0 ], fit_info['y'], 'dk' )
+        plt.fill_between( ozone_int_wn, p[0] * ozone_int_wn + p[1], sp[ ozone_int_idx ], alpha = 0.3, label = f"Ozone: {integral:.4f}" )
+
+    return integral, fit_info
+
+def compute_N2O( wn, sp, plot = False ):
+    # N2O-related area
+    N2O_idx = ( wn > 2150 ) * ( wn < 2285 )
+    N2O_wn = wn[ N2O_idx ]
+    N2O_0wn = N2O_wn - N2O_wn[ 0 ]
+    N2O_sp = sp[ N2O_idx ]
+
+    # Detect if N2O is up or down
+    N2O_central_idx = np.max( np.where( wn < 2236 )[0] )
+    N2O_a, _, _ = np.polyfit( wn[ N2O_central_idx - 4 : N2O_central_idx + 4 ], sp[ N2O_central_idx - 4 : N2O_central_idx + 4 ], 2 )
+    N2O_direction = -1 if N2O_a > 0 else +1
+
+    # Fitting function
+    N2O_fitfun = lambda x, m, q, A1, s1, A2, s2 : A1 * np.exp( - ( x - 2236 + N2O_wn[ 0 ] )**2 / s1 ) + A2 * np.exp( - ( x - 2212 + N2O_wn[ 0 ] )**2 / s2 ) + m * x + q
+    p0 = [ ( N2O_sp[-1] - N2O_sp[0] ) / ( N2O_wn[-1] - N2O_wn[0] ), N2O_sp[0], np.ptp( N2O_sp ) * N2O_direction, 10, np.ptp( N2O_sp ) * N2O_direction, 50 ]
+    bounds = (
+        # m,       q,       A1,      s1,      A2,      s2,    
+        [ -np.inf, -np.inf, -np.inf,  0     , -np.inf,  0     ],
+        [  np.inf,  np.inf,  np.inf,  1000  ,  np.inf,  1000  ]
+    )
+    
+    try:
+        p, pcov = curve_fit( N2O_fitfun, N2O_0wn, N2O_sp, p0, bounds=bounds )
+    except (RuntimeError, RuntimeWarning):
+        p = p0
+        p[2] = 0
+        p[4] = 0
+        pcov = np.zeros( ( len( p0 ), len( p0 ) ) )
+
+    ( m, q ) = correlated_values( p[0:2], pcov[0:2,0:2] )
+
+    # N2O-integrating area
+    N2O_int_idx = ( wn > 2190 ) * ( wn < 2250 )
+    N2O_int_wn = wn[ N2O_int_idx ] - N2O_wn[ 0 ]
+    integral = np.trapz( sp[ N2O_int_idx ] - m * N2O_int_wn - q,  wn[ N2O_int_idx ] )
+
+    fit_info = { 'm': p[0], 'x': np.mean( N2O_int_wn ) + N2O_wn[ 0 ], 'y': m * np.mean( N2O_int_wn ) + q }
+
+    if( plot ):
+        plt.plot( N2O_0wn, N2O_sp )
+        plt.fill_between( N2O_int_wn, p[0] * N2O_int_wn + p[1], sp[ N2O_int_idx ], alpha = 0.3, label = f"N2O: {integral:.4f}" )
+
+    return integral, fit_info
+
+def compute_NO2_midpoint_interpolation( wn, sp, O3_baseline, N2O_baseline, plot = False ):
+    # Select wide area to draw
+    draw_idx = ( wn > 1400 ) * ( wn < 1800 )
+    draw_wn = wn[ draw_idx ]
+    draw_sp = sp[ draw_idx ]
+
+
+    # Select NO2 second peak area
+    NO2_idx = ( wn > 1585 ) * ( wn < 1610 )
+    NO2_wn = wn[ NO2_idx ]
+    NO2_sp = sp[ NO2_idx ]
+
+    # Define the background
+    def line_between_two_points( x, x1, y1, x2, y2 ):
+        return y2 + ( y2 - y1 ) / ( x2 - x1 ) * ( x2 - x )
+    background_NO2_sp =  line_between_two_points( NO2_wn,  O3_baseline['x'], O3_baseline['y'], N2O_baseline['x'], N2O_baseline['y'] )
+    
+    # NO2 integration
+    integral_NO2 = np.trapz( NO2_sp - background_NO2_sp, wn[ NO2_idx ] )
+
+    if( plot ):
+        plt.plot( draw_wn - draw_wn[0], draw_sp )
+        plt.fill_between( NO2_wn - draw_wn[0], background_NO2_sp, NO2_sp, alpha = 0.3, label = f"NO2: {integral_NO2:.4f}" )
+
+    return integral_NO2
+
+gases_labels = { 'O3': '$O_3$', 'N2O': '$N_2O$', 'NO2': '$NO_2$'}
+
+def estimate_areas( wn, spectra, quiet = False, plot = False ):
+
+    areas = { 'O3': []     , 'N2O': []      ,'NO2': []}
+
+    flip = False
+    if( wn[-1] < wn[0] ):
+        wn = np.flip( wn )
+        flip = True
+
+    if( plot ):
+        splt.init_bytot( len( spectra ) )
+    
+    for i, sp in ( enumerate( spectra ) if quiet else tqdm( list( enumerate( spectra ) ) ) ):
+        sp = spectra[i,:]
+
+        if( plot ):
+            splt.next()
+
+        if( flip ):
+            sp = np.flip( sp )
+
+        sp = savgol_filter( sp, 13, 1 )
+
+        O3, O3_baseline = compute_ozone( wn, sp, plot )
+        areas['O3'].append( O3 )
+
+        N2O, N2O_baseline = compute_N2O( wn, sp, plot )
+        # areas['CO2'].append( CO2 )
+        areas['N2O'].append( N2O )
+        
+        NO2 = compute_NO2_midpoint_interpolation( wn, sp, O3_baseline, N2O_baseline, plot )
+        areas['NO2'].append( NO2 )
+
+        if( plot ):
+            plt.legend()
+            plt.title( i )
+
+    if( not quiet ):
+        print(f"{len(areas)} gases computed using peaks fitting")
+    
+    return areas
