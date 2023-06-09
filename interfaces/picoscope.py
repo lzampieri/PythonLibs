@@ -68,7 +68,7 @@ class Picoscope:
         
     def safelySetRange( self, channel, range ):
         try:
-            Picoscope.ps.setChannel( channel, VRange= range - 1e-4 )
+            Picoscope.ps.setChannel( channel, "DC", VRange= range - 1e-4 )
         except OSError:
             print( f"Unable to set range {range}" )
             Picoscope.availableRanges = np.delete( Picoscope.availableRanges, np.where( Picoscope.availableRanges == range )[0] )
