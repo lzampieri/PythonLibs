@@ -20,10 +20,21 @@ def plot_with_optional_fmt( x, y, fmt = None, **plot_info ):
         return
     plt.plot( x, y, **plot_info )
 
-def unp_plot( x, y, as_area = False, avoid_errors = False, **plot_info ):
+def unp_plot( x, y = [], as_area = False, avoid_errors = False, xy_sorted = False, **plot_info ):
+
+    if( len( x ) == 0 and len( y ) == 0 ):
+        return plt.plot( [], [], **plot_info )    
+    
+    if( len( y ) == 0 ):
+        y = x
+        x = list( range( len( y ) ) )
+
+    if( xy_sorted ):
+        x, y = sorted( x, y )
+
     if( as_area ):
         return unp_plot_area( x, y, **plot_info )
-
+    
     is_y = 'uncertainties' in str( type( y[0] ) )
     is_x = 'uncertainties' in str( type( x[0] ) )
 
