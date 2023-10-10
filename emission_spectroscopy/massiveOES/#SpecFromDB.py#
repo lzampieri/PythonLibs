@@ -1,0 +1,306 @@
+#import dataset
+import sqlite3 as sqlite
+import numpy as np
+from scipy.constants import physical_constants, h, c
+from massiveOES import spectrum
+import string, os
+
+
+kB = physical_constants['Boltzmann constant in inverse meters per kelvin'][0]
+kB /=100 #inverse cm
+
+class SpecDB(object):
+    def __init__(self, filename):
+        self.conn = sqlite.connect(filename)
+        #self.table = self.dbase['lines']
+        cur = self.conn.cursor()
+        self.components_upper = cur.execute('SELECT DISTINCT component_upper FROM lines').fetchall()
+        self.components_lower = cur.execute('SELECT DISTINCT component_lower FROM lines').fetchall()
+        self.br_comp_combinations = cur.execute('SELECT DISTINCT branch, component_upper, component_lower FROM lines').fetchall()
+        self.vs_upper = cur.execute('SELECT DISTINCT v_upper FROM lines').fetchall()
+        self.vs_lower = cur.execute('SELECT DISTINCT v_lower FROM lines').fetchall()
+        filename_end = filename.split(os.sep)[-1]
+        name_stop = string.find(filename_end,'.')
+        self.specie_name = filename_end[:name_stop]
+    
+    def get_relevant_states(self, wmin, wmax, in_air = True, **kwargs):
+        """wmin and wmax define the wavelength range in which lines from
+        relevant upper states appear. These relevant upper states are then returned. 
+        
+        if in_air is True, air wavelengths are considered, otherwise
+        the vacuum wavelengths are considered
+
+        """
+        max_J = kwargs.pop('max_J', None)
+        max_v = kwargs.pop('max_v', None)
+        cur = self.conn.cursor()
+        wav = 'air_wavelength' if in_air else 'vacuum_wavelength'
+        query = ('SELECT DISTINCT v_upper, J_upper, component_upper  FROM lines WHERE ' 
+                                 + wav + ' BETWEEN ' + str(wmin) + ' AND ' + str(wmax))
+        if max_J is not None:
+            query += ' AND J_upper <= ' + str(max_J)
+        if max_v is not None:
+            query += ' AND v_upper <= ' + str(max_v)
+        states = cur.execute(query)
+        return states
+
+    def lines_from_state(self, state, wmin=None, wmax=None, in_air = True):
+        """
+        state: a tuple with v_upper at [0], J_upper at [1] and component_upper at [2]
+        """
+        cur = self.conn.cursor()
+        wav = 'air_wavelength' if in_air else 'vacuum_wavelength'
+        query = 'SELECT ' + wav + ', A '#v_upper, J_upper, component_upper'  
+        #query += ', v_lower, J_lower, component_lower'
+        query += ', E_J_upper, E_v_upper'
+        query += ' FROM lines WHERE J_upper = '
+        query += str(state[1])
+        query += ' AND v_upper = '
+        query += str(state[0])
+        query += ' AND component_upper = '
+        query += str(state[2])
+        if wmin is not None and wmax is not None:
+            query += ' AND ' + wav + ' BETWEEN ' + str(wmin) + ' AND ' + str(wmax)
+        elif wmin is None and wmax is not None:
+            query += ' AND ' + wav + ' < ' + str(wmax)
+        elif wmin is not None and wmax is None:
+            query += ' AND ' + wav + ' > ' + str(wmin)
+        lines = cur.execute(query)
+        return lines
+
+    def get_relevant_lines_by_states(self, wmin=None, wmax=None, in_air = True, **kwargs):
+        states = self.get_relevant_states(wmin, wmax, **kwargs)
+        
+        #vs = []
+        #Js = []
+        #components = []
+        states_out = []
+        specs = []
+        E_J = []
+        E_v = []
+        for state in states:
+            lines = self.lines_from_state(state, wmin, wmax, in_air=in_air)
+            for line in lines:
+                specs.append((line[0], line[1]))
+                #vs.append(line[2])
+                #Js.append(line[3])
+                #components.append(line[4])
+                states_out.append(state)
+                
+                E_J.append(line[2])
+                E_v.append(line[3])
+        ret = {
+            #'vs' : np.array(vs, dtype=int),
+            #'Js' : np.array(Js),
+            #'components' : np.array(components),
+            'states' : np.array(states_out),
+            'E_J' : np.array(E_J),
+            'E_v' : np.array(E_v),
+            'specs' : np.array(specs)
+        }
+        return ret
+
+    def get_E_v(self, el, v, force_dunham = False):
+        "el: string specifying the electronic state. Valid values are *upper* or *lower*"
+        
+        # TIP: vyhledat jenom jednou pri prvnim dotazu a ulozit do pameti
+        #namecol = 'state_simple' if el in ['upper',  'lower'] else 'state'
+        E_v = None
+        cur = self.conn.cursor()
+        if not force_dunham:
+            query = 'SELECT E_v_' + el + ' FROM lines WHERE v_' + el + ' = ' + str(v)
+            E_v = cur.execute(query).fetchone()
+            if E_v is not None:
+                E_v = E_v[0]
+        
+        if E_v is None or force_dunham:
+            query = 'SELECT Y10, Y20, Y30, Y40 FROM Dunham'
+            query += ' WHERE state = \'' + el + '\''
+            coefs = cur.execute(query).fetchone()
+            E_v = 0
+            for k, coef in enumerate(coefs):
+                E_v += coef * (v+0.5)**(k+1)
+                if k==0:
+                    E_v -= coef * (0.5)
+        return E_v
+
+    def get_E_J(self, el, v, J, component = None):
+        cur = self.conn.cursor()
+        query = 'SELECT E_J_' + el + ' FROM lines '
+        query += 'WHERE J_' + el + ' = ' + str(J)
+        query += ' AND v_' + el + ' = ' + str(v)
+        if component is not None:
+            query += ' AND component_' + el + ' = ' + str(component)
+            E_J = cur.execute(query).fetchone()
+            if E_J is not None:
+                E_J = E_J[0]
+            else:
+                E_J = np.inf
+        else:
+            cur2 = self.conn.cursor()
+            E_J = []
+            comps = self.components_upper if el == 'upper' else self.components_lower
+            for component in comps:
+                query_end = ' AND component_' + el + ' = ' + str(component[0])
+                ej = cur.execute(query + query_end).fetchone()
+                if ej is not None:
+                    E_J.append(ej[0])
+                    #print component[0], ej[0]
+                else:
+                    E_J.append(np.inf)
+        return E_J
+        
+    def relative_vib_pops(self, el, T, smallest=1e-5,**kwargs):
+        firstincr = np.exp(-self.get_E_v(el, 0, **kwargs)/(kB*T))
+        v = 0
+        pops = []
+        while True:
+            incr = np.exp(-self.get_E_v(el, v, **kwargs)/(kB*T))
+            pops.append(incr)
+            if incr < smallest*firstincr or incr == np.inf:
+                break
+            v+=1
+        pops = np.array(pops)
+        norm = np.sum(pops)
+        return pops/norm
+
+
+    def relative_rot_pops(self, el, v, T, smallest=1e-5, asdict = False):
+        pops = []
+        cur = self.conn.cursor()
+        
+        query = 'SELECT MIN(J_'+el+') FROM lines WHERE v_'+el+'='+str(v)
+        J = cur.execute(query).fetchone()[0] #start from the smallest allowed J
+        firstincr = 0
+        while True:
+
+            EJs = np.array(self.get_E_J(el, v, J))
+            incr = (2*J+1) * np.exp(-EJs/(kB*T))
+            incr[EJs==0] = 0
+            if J == 0:
+                firstincr = max(incr)
+            if all(incr<firstincr*smallest) or any(np.isinf(incr)):
+                break
+            J += 1 
+            pops.append(incr)
+        pops = np.array(pops)
+        norm = pops.sum()
+        pops /= norm
+        if asdict:
+            ret = {}
+            for col in range(3):
+                ret[str(col+1)] = pops[:,col]
+            return ret
+        else:
+            return pops
+
+
+    def band_branch(self, v_upper, v_lower, branch, rot_pop, **kwargs):
+        """
+        
+        kwargs:
+           y: if set to 'intensity', the y-axis values are multiplied by h*nu
+              otherwise are left and thus represent the photon flux
+
+        """
+
+        in_air = kwargs.pop('air_wavelength', True)
+        y = kwargs.pop('y', 'photon flux')
+        cur = self.conn.cursor()
+        wav = 'air_wavelength' if in_air else 'vacuum_wavelength'
+        query = 'SELECT ' + wav + ', A'
+        if y == 'intensity':
+            query += ', wavenumber'
+        query += ' FROM lines '
+        query += 'WHERE v_upper = ' + str(v_upper)
+        query += ' AND v_lower = ' + str(v_lower)
+        query += ' AND branch = \'' + str(branch)+'\''
+        spec = cur.execute(query).fetchall()
+        spec = np.array(spec)
+        size = min(len(rot_pop), len(spec) )
+        spec = spec[:size,:]
+        spec[:,1] *= np.array(rot_pop[:size])
+        if y == 'intensity':
+            spec[:,1] *= spec[:,2] * h * c * 100 # intensity in W/m**2
+            spec = spec[:,:2]
+        return spec
+
+    def band_component(self, v_upper, v_lower, component, rot_pop, **kwargs):
+        sp =[]
+        for b in self.br_comp_combinations:
+            if b[1] == component:
+              sp.append(self.band_branch(v_upper, v_lower, b[0], rot_pop, **kwargs))  
+
+        return np.vstack(sp)
+
+    def band(self, v_upper, v_lower, rot_pop, **kwargs):
+        res =[]
+        for component in self.components_upper:
+            res.append(self.band_component(v_upper, v_lower, component[0], 
+                                           rot_pop[:,component[0]-1], **kwargs))
+        return np.vstack(res)
+        
+        
+
+    def all_bands(self, vib_pop, rot_pops, **kwargs):
+        """
+        rot_pops: a dictionary with keys given by the upper vibrational
+                  quantum number and values by respective rotational populations
+                  for each vibrational state
+
+        """
+        res = []
+        for v_upper in self.vs_upper:
+            v_upper = v_upper[0]
+            for v_lower in self.vs_lower:
+                #the sequence of vibrational populations is only as long as 
+                #it needs to be. The bands originating from negligibly
+                #populated vibronic levels are not calculated.x 
+                v_lower = v_lower[0]
+                if v_upper < len(vib_pop):
+                    #print('Generating band (', v_upper, v_lower, ')')
+                    current_band = self.band(v_upper, v_lower, rot_pops[v_upper], **kwargs)
+                    current_band[:,1] *= vib_pop[v_upper]
+                    res.append(current_band)
+        return np.concatenate(res)
+
+    def get_spectrum(self, Trot, Tvib, **kwargs):
+        as_spectrum = kwargs.pop('as_spectrum', True)
+        vib_pop = self.relative_vib_pops('upper', T = Tvib)
+
+        rot_pops = {}
+        for v in self.vs_upper:
+            v = v[0]
+            rot_pops[v] = self.relative_rot_pops(el='upper', v = v, T=Trot)
+        ret = self.all_bands(vib_pop, rot_pops, **kwargs)
+        if as_spectrum:
+
+            ret = spectrum.Spectrum(x = ret[:,0], y = ret[:,1])
+        return ret
+
+def puke_spectrum(params, **kwargs):
+
+    step = kwargs.pop('step', params['wav_step'])    
+    
+    spectra = []
+    
+    for specie in params.info['species']:
+        temp_spec = params.info[specie+'_sim'].get_spectrum(params[specie+'_Trot'].value,
+                                                            params[specie+'_Tvib'].value,
+                                                            as_spectrum = False)
+        temp_spec[:,1] *= params[specie+'_intensity']    
+        spectra.append(temp_spec)
+
+    spec = np.concatenate(spectra)
+    spec =  spec[spec[:,0].argsort()]
+    spec = spectrum.Spectrum(x=spec[:,0], y = spec[:,1])
+    spec.refine_mesh()
+    spec.convolve_with_slit_function(gauss = params['slitf_gauss'].value, 
+                                          lorentz = params['slitf_lorentz'].value, 
+                                          step = step)
+
+    if len(spec.y)>0:
+        spec.y += params['baseline'].value
+    return spec
+
+

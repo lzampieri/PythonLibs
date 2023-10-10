@@ -1,16 +1,18 @@
 import pandas as pd
-from . import rspro, nicolet, opus, gc, images
+from . import rspro, nicolet, opus, gc, images, evt, avantes, lecroy
 from glob import glob
 import re
-from os.path import exists
+from os.path import exists, dirname
 from standard_imports import *
+
+default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','lecroy']
 
 def load_index( folder, filename = "index.xlsx" ):
     dataset = pd.read_excel( folder + "/" + filename ).rename( columns = { 'id': 'ID', 'Id': 'ID' } ).to_dict('records')
 
     return dataset
 
-def load_data( dataset, folder, load_all = False, to_load = ['rspro','nicolet_SPA','nicolet_SRS','opus','gc','jpg'] ):
+def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     ids = [ d['ID'] for d in dataset ]
 
     # RSPRO
@@ -117,6 +119,30 @@ def load_data( dataset, folder, load_all = False, to_load = ['rspro','nicolet_SP
 
             dataset[ ids.index( id ) ][ 'gc' ] = gc.read_axy( file )
 
+    # GC AXY series
+    gc_series_toimport = {}
+    if( 'gc_series' in to_load ):
+
+        pattern = ".*[_/\\\\](\d+)[_/\\\\][^/\\\\]*_\d+\.AXY"
+        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*[_/\\\\][^/\\\\]*_\d+\.AXY"
+        for file in glob( folder + "/*/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): matches = re.match( pattern2, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all ):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            gc_series_toimport[ id ] = dirname( file  )
+    if( len( gc_series_toimport ) > 0 ):
+        for id, path in gc_series_toimport.items():
+            dataset[ ids.index( id ) ][ 'gc_series' ] = gc.read_axy_series( path )
+
     # JPG images
     if( 'jpg' in to_load ):
 
@@ -137,13 +163,78 @@ def load_data( dataset, folder, load_all = False, to_load = ['rspro','nicolet_SP
 
             dataset[ ids.index( id ) ][ 'jpg' ] = images.read_jpg( file )
 
+    # Events indices
+    if( 'evt' in to_load ):
+
+        pattern = ".*[_/\\\\](\d+)\.evt.xlsx"
+        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.evt.xlsx"
+        for file in glob( folder + "/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): matches = re.match( pattern2, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            dataset[ ids.index( id ) ][ 'evt' ] = evt.read_evt( file )
+
+    # Spectroscopy avantes
+    if( 'avantes' in to_load ):
+
+        pattern = ".*[_/\\\\](\d+)\.Raw8"
+        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.Raw8"
+        pattern3= ".*[_/\\\\]New Experiment(\d+)\.Raw8"
+
+        for file in glob( folder + "/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): matches = re.match( pattern2, file )
+            if( not matches ): matches = re.match( pattern3, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            dataset[ ids.index( id ) ][ 'avantes' ] = avantes.load_raw8( file )
+
+    # Lecroy waveforms
+    if( 'lecroy' in to_load ):
+
+        pattern = ".*[/\\\\]S[CD](.)(\d+).TXT"
+
+        for file in glob( folder + "/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[1] )
+            channel = matches.groups()[0]
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            if( 'lecroy' not in dataset[ ids.index( id ) ].keys() ):
+                dataset[ ids.index( id ) ][ 'lecroy' ] = {}
+            dataset[ ids.index( id ) ][ 'lecroy' ][ channel ] = lecroy.load( file )
+
     return dataset
 
-def load_index_and_data( folder, index_filename = "index.xlsx", load_all = False, update_index = False, to_load = ['rspro','nicolet_SPA','nicolet_SRS','opus','gc','jpg'], load_only = [] ):
+def load_index_and_data( folder, index_filename = "index.xlsx", load_all = False, update_index = False, to_load = default_toload, load_only = [] ):
     if( exists( folder + "/" + index_filename ) ):
         index = load_index( folder, index_filename )
     else:
-        if( update_index ):
+        if( load_all or update_index ):
             index = []
         else:
             raise FileNotFoundError(f"File {folder}/{index_filename} not found!")
@@ -177,7 +268,7 @@ def load_index_and_data( folder, index_filename = "index.xlsx", load_all = False
 def add_cols_to_index( data, folder, cols_to_add = [], index_filename = "index.xlsx", verbose = False ):
     old_index = load_index( folder, index_filename )
 
-    assert len( data ) == len( old_index ), "The dataset provided have a length different from the actual index!"
+    assert len( data ) == len( old_index ), f"The dataset provided have a length different from the actual index! {len( data )} vs {len( old_index )} "
 
     keys = list( old_index[0].keys() )
     to_update = False

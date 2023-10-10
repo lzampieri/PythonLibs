@@ -70,14 +70,14 @@ def compute_lissajous( time, voltage_minus_C_voltage, charge, crop = True, N_per
         return power, idx
     return power
 
-def plot_lissajous( voltage, charge, power = 0, forceClosure = True, N_periods = 0 ):
+def plot_lissajous( voltage, charge, label = None, power = 0, forceClosure = True, N_periods = 0 ):
 
     if( forceClosure ):
         voltage = np.append( voltage, [ voltage[0] ] )
         charge = np.append( charge, [ charge[0] ] )
 
     plt.plot( voltage, charge )
-    plt.fill_between( voltage, charge, alpha = 0.3, label = fr"${power:.1fL}$ W" if power else None )
+    plt.fill_between( voltage, charge, alpha = 0.3, label = label if label else ( fr"${power:.1fL}$ W" if power else None ) )
     plt.xlabel( 'Voltage [V]' )
     plt.ylabel( 'Charge [C]' )
 

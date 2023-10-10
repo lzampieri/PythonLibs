@@ -12,7 +12,10 @@ def time():
     degree_mul = ceil( degree_abs / 3 ) * 3
 
     ticks, _ = plt.xticks()
-    plt.xticks( ticks, [f"{t:.0f}" for t in ticks * ( 10 ** degree_mul )] )
+    if( len( ticks ) > np.ptp( ticks * ( 10 ** degree_mul ) ) + 1 ):
+        plt.xticks( ticks, [f"{t:.1f}" for t in ticks * ( 10 ** degree_mul )] )
+    else:
+        plt.xticks( ticks, [f"{t:.0f}" for t in ticks * ( 10 ** degree_mul )] )
 
     prefix = {
         0: '',
@@ -26,7 +29,16 @@ def time():
 
     
 def voltage():
-    plt.ylabel( f"Voltage [V]" )
+    if( np.ptp( plt.ylim() ) > 2000 ):
+        ticks, _ = plt.yticks()
+        if( len( ticks ) > np.ptp( ticks / 1000 ) + 1 ):
+            plt.yticks( ticks, [f"{t:.1f}" for t in ticks / 1000 ] )
+        else:
+            plt.yticks( ticks, [f"{t:.0f}" for t in ticks / 1000 ] )
+        plt.ylabel( f"Voltage [kV]" )
+
+    else:
+        plt.ylabel( f"Voltage [V]" )
 
 def Voft():
     time()

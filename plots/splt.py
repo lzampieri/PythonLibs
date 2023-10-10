@@ -5,6 +5,7 @@ import numpy as np
 from matplotlib import cm
 from math import ceil
 import os
+import seaborn as sns
 
 _plot_params = 0
 _plot_tred = False
@@ -12,16 +13,31 @@ _plot_ca = None
 _export_folder = "exports"
 _factor = 1
 
-def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False ):
+def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, seaborn = True ):
     plt.figure( figsize = ( numcols * size[0] / _factor, numrows * size[1] / _factor  ) )
+    if( seaborn ):
+        sns.set_theme()
     global _plot_params
     global _plot_tred
     _plot_params = [ int( numrows ), int( numcols ), 0 ]
     _plot_tred = tred
     if( init or ( numrows == 1 and numcols == 1 ) ):
         next()
+def set_scale_factor_raw( new_factor ):
+    global _factor
+    _factor = new_factor
+    # Otherwise, one can use:
+    # sns.set_context("paper")
+    # sns.set_context("paper", font_scale=1.5)
+    # sns.set_context("notebook")
+    # sns.set_context("talk")
+    # sns.set_context("poster")
 def init_bytot( numtot, cols = 4, **args ):
+    if( numtot < cols ):
+        return init( 1, numtot, **args )
     return init( ceil( numtot/cols), cols, **args )
+def init_bylen( array, **args ):
+    return init_bytot( len( array ), **args )
 def next():
     global _plot_params
     global _plot_tred
@@ -64,9 +80,6 @@ def lacking( text="" ):
 def set_export_folder( folder ):
     global _export_folder
     _export_folder = folder
-def set_scale_factor( new_factor ):
-    global _factor
-    _factor = new_factor
 def export( filename, draft = False ):
     global _export_folder
 

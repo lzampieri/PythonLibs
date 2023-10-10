@@ -20,7 +20,7 @@ def plot_with_optional_fmt( x, y, fmt = None, **plot_info ):
         return
     plt.plot( x, y, **plot_info )
 
-def unp_plot( x, y = [], as_area = False, avoid_errors = False, xy_sorted = False, **plot_info ):
+def unp_plot( x, y = [], as_area = False, avoid_errors = False, xy_sorted = False, normalize = False, **plot_info ):
 
     if( len( x ) == 0 and len( y ) == 0 ):
         return plt.plot( [], [], **plot_info )    
@@ -34,6 +34,9 @@ def unp_plot( x, y = [], as_area = False, avoid_errors = False, xy_sorted = Fals
 
     if( as_area ):
         return unp_plot_area( x, y, **plot_info )
+    
+    if( normalize ):
+        y = normalized( y )
     
     is_y = 'uncertainties' in str( type( y[0] ) )
     is_x = 'uncertainties' in str( type( x[0] ) )
@@ -55,6 +58,7 @@ def unp_plot( x, y = [], as_area = False, avoid_errors = False, xy_sorted = Fals
     else:
         plot_with_optional_fmt( x, y, **plot_info )
 
+plot = unp_plot
 
 def unp_plot_area( x, y, **plot_info ):
     is_y = 'uncertainties' in str( type( y[0] ) )
@@ -69,3 +73,8 @@ def unp_plot_area( x, y, **plot_info ):
 
     plot_with_optional_fmt( x_n, y_n, **plot_info )
     plt.fill_between( x_n, y_n - y_s, y_n + y_s, color=plot_info['color'], alpha=0.2, label=None )
+
+def events( evt_xlsx ):
+    y = plt.ylim()[0] + 0.1 * np.ptp( plt.ylim() )
+    for e in evt_xlsx:
+        plt.annotate( e['label'], ( e['time'], y ),rotation = 'vertical' )

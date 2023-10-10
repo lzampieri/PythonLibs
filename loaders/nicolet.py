@@ -173,9 +173,9 @@ def read_srs_splitted( file ):
         if( not matches ): continue
 
         id = int( matches.groups()[0] )
-        sp, wl, _ = read_spa( spa_file )
-        output['wl'] = wl
-        output['A'].append( list( sp ) )
+        data = read_spa( spa_file )
+        output['wl'] = data['wl']
+        output['A'].append( list( data['A'] ) )
         output['times'].append( id )
 
     if( len( output['times'] ) > 0 ):

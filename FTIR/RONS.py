@@ -5,8 +5,9 @@ from scipy.optimize import curve_fit
 from plots import splt, adv_plt
 from tqdm.auto import tqdm
 from uncertainties import correlated_values
+from calibrations import calibrations
 
-def compute_ozone( wn, sp, plot = False ):
+def compute_ozone( wn, sp, plot = False, plot_with_real_wn = False ):
     # Ozone-related area
     # ozone_idx = ( wn > 1000 ) * ( wn < 1150 )
     ozone_idx = ( wn > 950 ) * ( wn < 1100 )
@@ -50,10 +51,13 @@ def compute_ozone( wn, sp, plot = False ):
         plt.plot( ozone_0wn, ozone_sp )
         # plt.plot( fit_info['x'] - ozone_wn[ 0 ], fit_info['y'], 'dk' )
         plt.fill_between( ozone_int_wn, p[0] * ozone_int_wn + p[1], sp[ ozone_int_idx ], alpha = 0.3, label = f"Ozone: {integral:.4f}" )
+    if( plot_with_real_wn ):
+        plt.plot( ozone_0wn + ozone_wn[ 0 ], ozone_sp )
+        plt.fill_between( ozone_int_wn + ozone_wn[ 0 ], p[0] * ozone_int_wn + p[1], sp[ ozone_int_idx ], alpha = 0.3, label = f"Ozone: {integral:.4f}" )
 
     return integral, fit_info
 
-def compute_N2O( wn, sp, plot = False ):
+def compute_N2O( wn, sp, plot = False, plot_with_real_wn = False ):
     # N2O-related area
     N2O_idx = ( wn > 2150 ) * ( wn < 2285 )
     N2O_wn = wn[ N2O_idx ]
@@ -66,12 +70,12 @@ def compute_N2O( wn, sp, plot = False ):
     N2O_direction = -1 if N2O_a > 0 else +1
 
     # Fitting function
-    N2O_fitfun = lambda x, m, q, A1, s1, A2, s2 : A1 * np.exp( - ( x - 2236 + N2O_wn[ 0 ] )**2 / s1 ) + A2 * np.exp( - ( x - 2212 + N2O_wn[ 0 ] )**2 / s2 ) + m * x + q
+    N2O_fitfun = lambda x, m, q, A1, s1, A2, s2 : A1 * np.exp( - ( x - 2238 + N2O_wn[ 0 ] )**2 / s1 ) + A2 * np.exp( - ( x - 2210 + N2O_wn[ 0 ] )**2 / s2 ) + m * x + q
     p0 = [ ( N2O_sp[-1] - N2O_sp[0] ) / ( N2O_wn[-1] - N2O_wn[0] ), N2O_sp[0], np.ptp( N2O_sp ) * N2O_direction, 10, np.ptp( N2O_sp ) * N2O_direction, 50 ]
     bounds = (
         # m,       q,       A1,      s1,      A2,      s2,    
         [ -np.inf, -np.inf, -np.inf,  0     , -np.inf,  0     ],
-        [  np.inf,  np.inf,  np.inf,  1000  ,  np.inf,  1000  ]
+        [  np.inf,  np.inf,  np.inf,  500  ,  np.inf,  2000  ]
     )
     
     try:
@@ -94,6 +98,9 @@ def compute_N2O( wn, sp, plot = False ):
     if( plot ):
         plt.plot( N2O_0wn, N2O_sp )
         plt.fill_between( N2O_int_wn, p[0] * N2O_int_wn + p[1], sp[ N2O_int_idx ], alpha = 0.3, label = f"N2O: {integral:.4f}" )
+    if( plot_with_real_wn ):
+        plt.plot( N2O_0wn + N2O_wn[ 0 ], N2O_sp )
+        plt.fill_between( N2O_int_wn + N2O_wn[ 0 ], p[0] * N2O_int_wn + p[1], sp[ N2O_int_idx ], alpha = 0.3, label = f"N2O: {integral:.4f}" )
 
     return integral, fit_info
 
@@ -124,7 +131,7 @@ def compute_N2O( wn, sp, plot = False ):
 
 #     return integral_NO2
 
-def compute_NO2( wn, sp, plot = False ):
+def compute_NO2( wn, sp, plot = False, plot_with_real_wn = False ):
     # NO2-related area
     NO2_idx = ( wn > 1582 ) * ( wn < 1615 )
     NO2_wn = wn[ NO2_idx ]
@@ -166,6 +173,11 @@ def compute_NO2( wn, sp, plot = False ):
         plt.plot( NO2_0wn, NO2_fitfun( NO2_0wn, *p ) )
         plt.plot( NO2_0wn, NO2_fitfun( NO2_0wn, p[0], p[1], 0, p[3] ) )
         plt.fill_between( NO2_int_wn, p[0] * NO2_int_wn + p[1], sp[ NO2_int_idx ], alpha = 0.3, label = f"NO2: {integral:.4f}" )
+
+    if( plot_with_real_wn ):
+        plt.plot( NO2_0wn + NO2_wn[ 0 ], NO2_sp )
+        plt.fill_between( NO2_int_wn + NO2_wn[ 0 ], p[0] * NO2_int_wn + p[1], sp[ NO2_int_idx ], alpha = 0.3, label = f"NO2: {integral:.4f}" )
+        plt.plot( NO2_0wn + NO2_wn[ 0 ], NO2_fitfun( NO2_0wn, *p ) )
 
     return integral, fit_info
 
@@ -215,9 +227,24 @@ def compute_H2O2( wn, sp, plot = False ):
 
     return integral, fit_info
 
-gases_labels = { 'O3': '$O_3$', 'N2O': '$N_2O$', 'NO2': '$NO_2$', 'H2O2': '$H_2O_2$' }
+gases_labels = { 'O3': '$O_3$', 'N2O': '$N_2O$', 'NO2': '$NO_2$', 'H2O2': '$H_2O_2$',
+                 'O3_ppm': '$O_3$ [ppm]', 'N2O_ppm': '$N_2O$ [ppm]' }
 
-def estimate_areas( wn, spectra, quiet = False, plot = False ):
+def calibrate_available( areas, path_length_meters = None ):
+    output = {
+        'O3_ppm': calibrations.calibrate( "o3_1050_10m", areas['O3'] ),
+        'N2O_ppm': calibrations.calibrate( "n2o_2240_10m", areas['N2O'] ),
+    }
+
+    if ( path_length_meters ):
+        factor = 10.0 / path_length_meters
+        print( f"Rescaling by a factor 10 m / {path_length_meters} m = {factor}" )
+        for k in output.keys():
+            output[k] *= factor
+
+    return output
+
+def estimate_areas( wn, spectra, quiet = False, plot = False, calibrate = True, path_length_meters = None ):
     
     if( spectra.ndim == 1 ):
         spectra = np.array( [ spectra ] )
@@ -265,5 +292,8 @@ def estimate_areas( wn, spectra, quiet = False, plot = False ):
 
         # if( i > 10 ):
             # break
+
+    if( calibrate ):
+        areas.update( calibrate_available( areas, path_length_meters ) )
     
     return areas

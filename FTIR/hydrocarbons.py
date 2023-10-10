@@ -51,8 +51,8 @@ def compute_propane_main( wn, sp, plot = False ):
 
 def calibrate_propane( propane_second, propane_main ):
 
-    propane_second_ppm = calibrations.calibrate( "propane_secondpeak_FTIR", propane_second )
-    propane_main_ppm = calibrations.calibrate( "propane_mainpeak_FTIR", propane_main )
+    propane_second_ppm = calibrations.calibrate( "propane_secondpeak_FTIR_10m", propane_second )
+    propane_main_ppm = calibrations.calibrate( "propane_mainpeak_FTIR_10m", propane_main )
 
     propane_avg_ppm = np.mean( [propane_second_ppm, propane_main_ppm], axis = 0 )
 

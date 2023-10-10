@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from scipy.optimize import curve_fit
 from plots import splt, adv_plt
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from uncertainties import correlated_values
+from calibrations import calibrations
 
 def compute_propane( time, sp, plot = False ):
 
@@ -32,7 +33,7 @@ def compute_propane( time, sp, plot = False ):
 
     return integral
 
-def estimate_areas( time, spectra, quiet = False, plot = False ):
+def estimate_areas( time, spectra, quiet = False, plot = False, calibrate = True ):
 
     if( spectra.ndim == 1 ):
         spectra = np.array( [ spectra ] )
@@ -49,7 +50,7 @@ def estimate_areas( time, spectra, quiet = False, plot = False ):
     if( plot ):
         splt.init_bytot( spectra.ndim > 1 )
     
-    for i, sp in ( enumerate( spectra ) if quiet else tqdm( list( enumerate( spectra ) ) ) ):
+    for i, sp in ( enumerate( spectra ) if quiet else tqdm( list( enumerate( spectra ) ), leave=False ) ):
         sp = spectra[i,:]
 
         if( plot ):
@@ -71,5 +72,9 @@ def estimate_areas( time, spectra, quiet = False, plot = False ):
 
         # if( i > 10 ):
             # break
+
+    if( calibrate ):
+        areas['propane_ppm'] = calibrations.calibrate( "propane_GC", areas['propane'] )
+
     
     return areas
