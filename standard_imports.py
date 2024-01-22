@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from plots import adv_plt as plt
 import seaborn as sns
 import pandas as pd
 from uncertainties import *
@@ -29,7 +29,11 @@ def between( y, x, xlim ):
 
     return np.array(y)[idx]
 
-def mean( array ):
+def mean( array, exclude_nan = False ):
+    if( len( array ) == 1 ):
+        return array[0]
+    if( exclude_nan ):
+        array = np.array( array )[ ~ np.isnan( array ) ]
     mean = np.mean( array )
     compatible = False
     for i1, a1 in enumerate( array ):
@@ -40,7 +44,7 @@ def mean( array ):
                 compatible = False
                 break
     if( compatible ):
-        std = mean.s * sqrt( len( array ) )
+        std = mean.s / sqrt( len( array ) )
     else:
         std = np.std( unp_n( array ) )
 

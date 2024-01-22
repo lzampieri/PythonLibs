@@ -1,6 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib.pyplot import *
 from uncertainties import *
+
+old_plot = plot
 
 def unp_n( x ):
     return np.array( [ xx.n for xx in x ] if 'uncertainties' in str( type( x[0] ) ) else x )
@@ -16,14 +18,14 @@ def normalized( y ):
 
 def plot_with_optional_fmt( x, y, fmt = None, **plot_info ):
     if( fmt ):
-        plt.plot( x, y, fmt, **plot_info )
+        old_plot( x, y, fmt, **plot_info )
         return
-    plt.plot( x, y, **plot_info )
+    old_plot( x, y, **plot_info )
 
-def unp_plot( x, y = [], as_area = False, avoid_errors = False, xy_sorted = False, normalize = False, **plot_info ):
+def unp_plot( x, y = [], *args, as_area = False, avoid_errors = False, xy_sorted = False, normalize = False, **plot_info ):
 
     if( len( x ) == 0 and len( y ) == 0 ):
-        return plt.plot( [], [], **plot_info )    
+        return old_plot( [], [], *args, **plot_info )    
     
     if( len( y ) == 0 ):
         y = x
@@ -33,7 +35,7 @@ def unp_plot( x, y = [], as_area = False, avoid_errors = False, xy_sorted = Fals
         x, y = sorted( x, y )
 
     if( as_area ):
-        return unp_plot_area( x, y, **plot_info )
+        return unp_plot_area( x, y, *args, **plot_info )
     
     if( normalize ):
         y = normalized( y )
@@ -42,21 +44,21 @@ def unp_plot( x, y = [], as_area = False, avoid_errors = False, xy_sorted = Fals
     is_x = 'uncertainties' in str( type( x[0] ) )
 
     if( avoid_errors ):
-        plt.plot( unp_n(x), unp_n(y), **plot_info )
+        old_plot( unp_n(x), unp_n(y), *args, **plot_info )
         return
 
 
     if( is_x and is_y ):
-        plt.errorbar( unp_n(x), unp_n(y), unp_s(y), unp_s(x), **plot_info )
+        errorbar( unp_n(x), unp_n(y), unp_s(y), unp_s(x), *args, **plot_info )
         return
     if( is_y ):
-        plt.errorbar( x, unp_n(y), unp_s(y), **plot_info )
+        errorbar( x, unp_n(y), unp_s(y), *args, **plot_info )
         return
     if( is_x ):
-        plt.errorbar( unp_n(x), y, np.zeros_like(y), unp_s(x), **plot_info )
+        errorbar( unp_n(x), y, np.zeros_like(y), unp_s(x), *args, **plot_info )
         return
     else:
-        plot_with_optional_fmt( x, y, **plot_info )
+        plot_with_optional_fmt( x, y, *args, **plot_info )
 
 plot = unp_plot
 
@@ -69,12 +71,25 @@ def unp_plot_area( x, y, **plot_info ):
     y_s = unp_s( y ) if is_y else np.zeros_like( y )
 
     if( 'color' not in plot_info ):
-        plot_info['color'] = next( plt.gca()._get_lines.prop_cycler )['color']
+        plot_info['color'] = next( gca()._get_lines.prop_cycler )['color']
 
     plot_with_optional_fmt( x_n, y_n, **plot_info )
-    plt.fill_between( x_n, y_n - y_s, y_n + y_s, color=plot_info['color'], alpha=0.2, label=None )
+    fill_between( x_n, y_n - y_s, y_n + y_s, color=plot_info['color'], alpha=0.2, label=None )
 
 def events( evt_xlsx ):
-    y = plt.ylim()[0] + 0.1 * np.ptp( plt.ylim() )
+    y = ylim()[0] + 0.1 * np.ptp( plt.ylim() )
     for e in evt_xlsx:
-        plt.annotate( e['label'], ( e['time'], y ),rotation = 'vertical' )
+        annotate( e['label'], ( e['time'], y ),rotation = 'vertical' )
+
+def extract_key_array( keys, item ):
+    if( len( keys ) == 1 ):
+        return item[ keys[0] ]
+    return extract_key_array( keys[1:], item[ keys[0] ] )
+
+def plot_bykeys( x_keys, y_keys, data, *args, **kargs ):
+    unp_plot(
+        [ extract_key_array( x_keys, d ) for d in data ],
+        [ extract_key_array( y_keys, d ) for d in data ],
+        *args,
+        **kargs
+    )

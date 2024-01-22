@@ -1,11 +1,11 @@
 import pandas as pd
-from . import rspro, nicolet, opus, gc, images, evt, avantes, lecroy
+from . import rspro, nicolet, opus, gc, images, evt, avantes, lecroy, metex
 from glob import glob
 import re
 from os.path import exists, dirname
 from standard_imports import *
 
-default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','lecroy']
+default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','lecroy','metex', 'teledyne']
 
 def load_index( folder, filename = "index.xlsx" ):
     dataset = pd.read_excel( folder + "/" + filename ).rename( columns = { 'id': 'ID', 'Id': 'ID' } ).to_dict('records')
@@ -227,6 +227,46 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
             if( 'lecroy' not in dataset[ ids.index( id ) ].keys() ):
                 dataset[ ids.index( id ) ][ 'lecroy' ] = {}
             dataset[ ids.index( id ) ][ 'lecroy' ][ channel ] = lecroy.load( file )
+
+    # Metex data
+    if( 'metex' in to_load ):
+
+        pattern = ".*[/\\\\]M(\d+)\.metex\.csv"
+
+        for file in glob( folder + "/*" ):
+            matches = re.match( pattern, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            dataset[ ids.index( id ) ][ 'metex' ] = metex.load( file )
+
+    # Lecroy waveforms
+    if( 'teledyne' in to_load ):
+
+        pattern = ".*[/\\\\]C(\d+)-[^/\\\\]+-(\d+).csv"
+
+        for file in glob( folder + "/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[1] )
+            channel = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            if( 'teledyne' not in dataset[ ids.index( id ) ].keys() ):
+                dataset[ ids.index( id ) ][ 'teledyne' ] = {}
+            dataset[ ids.index( id ) ][ 'teledyne' ][ channel ] = lecroy.load( file )
 
     return dataset
 

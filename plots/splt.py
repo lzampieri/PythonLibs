@@ -13,7 +13,7 @@ _plot_ca = None
 _export_folder = "exports"
 _factor = 1
 
-def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, seaborn = True ):
+def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, seaborn = False ):
     plt.figure( figsize = ( numcols * size[0] / _factor, numrows * size[1] / _factor  ) )
     if( seaborn ):
         sns.set_theme()
@@ -32,6 +32,8 @@ def set_scale_factor_raw( new_factor ):
     # sns.set_context("notebook")
     # sns.set_context("talk")
     # sns.set_context("poster")
+def enable_seaborn():
+    sns.set_theme()
 def init_bytot( numtot, cols = 4, **args ):
     if( numtot < cols ):
         return init( 1, numtot, **args )

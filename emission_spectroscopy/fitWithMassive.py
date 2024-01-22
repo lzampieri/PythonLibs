@@ -4,6 +4,11 @@ from uncertainties import ufloat
 from . import massiveOES
 from collections import OrderedDict
 
+def fitAndGetPars( wl, int ):
+    interface = prepareInterface( wl, int )
+    fit( interface )
+    return fit_pars( interface )
+
 def prepareInterface( wl, int ):
 
     # Init massiveOES interface

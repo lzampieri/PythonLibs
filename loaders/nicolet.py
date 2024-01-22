@@ -74,6 +74,14 @@ def read_spa(filepath):
         'title': SpectraTitles
     }
 
+def spa_to_csv( file ):
+    data = read_spa( file )
+
+    df = pd.DataFrame( data = data['A'], index = data['wl'], columns = ['A'] )
+    df.to_csv( file + ".csv" )
+
+    print("Produced file", file + ".csv")
+
 def read_srs(file):
     with open( file, 'rb') as f:
         data = np.fromfile(f, np.single, -1)

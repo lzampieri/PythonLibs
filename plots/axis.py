@@ -92,3 +92,6 @@ def cartesian_axis( show_h = True, show_v = True ):
 
     plt.xlim(xlim)
     plt.ylim(ylim)
+
+def tilt_xlabels():
+    plt.xticks( rotation = 30, ha = 'right' )
