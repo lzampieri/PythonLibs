@@ -1,11 +1,11 @@
 import pandas as pd
-from . import rspro, nicolet, opus, gc, images, evt, avantes, lecroy, metex
+from . import rspro, nicolet, opus, gc, images, evt, avantes, lecroy, metex, EPR
 from glob import glob
 import re
 from os.path import exists, dirname
 from standard_imports import *
 
-default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','lecroy','metex', 'teledyne']
+default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','lecroy','metex', 'teledyne', 'EPR']
 
 def load_index( folder, filename = "index.xlsx" ):
     dataset = pd.read_excel( folder + "/" + filename ).rename( columns = { 'id': 'ID', 'Id': 'ID' } ).to_dict('records')
@@ -267,6 +267,25 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
             if( 'teledyne' not in dataset[ ids.index( id ) ].keys() ):
                 dataset[ ids.index( id ) ][ 'teledyne' ] = {}
             dataset[ ids.index( id ) ][ 'teledyne' ][ channel ] = lecroy.load( file )
+
+    # EPR raw data
+    if( 'EPR' in to_load ):
+
+        pattern = ".*[/\\\\](\d+)([^/\\\\\d][^/\\\\]*)?.EPR"
+
+        for file in glob( folder + "/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            dataset[ ids.index( id ) ][ 'EPR' ] = EPR.load( file )
 
     return dataset
 

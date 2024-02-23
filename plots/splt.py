@@ -6,12 +6,16 @@ from matplotlib import cm
 from math import ceil
 import os
 import seaborn as sns
+import itertools
 
 _plot_params = 0
 _plot_tred = False
 _plot_ca = None
 _export_folder = "exports"
 _factor = 1
+
+_markers_list = 'ovsDPX'
+_markers_cycle = itertools.cycle( _markers_list )
 
 def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, seaborn = False ):
     plt.figure( figsize = ( numcols * size[0] / _factor, numrows * size[1] / _factor  ) )
@@ -96,3 +100,11 @@ def export( filename, draft = False ):
     plt.savefig( _export_folder + "/" + filename + ".pdf", bbox_inches="tight" )
 
     print(_export_folder + "/" + filename + ".pdf")
+
+def marker():
+    global _markers_cycle
+    return _markers_cycle.__next__()
+def markers_reset():
+    global _markers_cycle
+    global _markers_list
+    _markers_cycle = itertools.cycle( _markers_list )
