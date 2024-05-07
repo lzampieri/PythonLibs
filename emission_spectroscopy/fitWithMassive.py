@@ -5,11 +5,33 @@ from . import massiveOES
 from collections import OrderedDict
 
 def fitAndGetPars( wl, int, autocrop = True ):
+    """
+    Fit data with massiveOES and return fit results
+    ---
+    Parameters:
+    wl: wavelength, numpy array containing the wavelengths
+    int: intensity, numpy array containing the intensities
+    autocrop: automatically crop data to the interval 360-383. Default: True
+    ---
+    Return:
+    fit parameters, in a dictionary
+    """
     interface = prepareInterface( wl, int, autocrop )
     fit( interface )
     return fit_pars( interface )
 
 def prepareInterface( wl, int, autocrop = True ):
+    """
+    Prepare the interface to fit via MassiveOES
+    ---
+    Parameters:
+    wl: wavelength, numpy array containing the wavelengths
+    int: intensity, numpy array containing the intensities
+    autocrop: automatically crop data to the interval 360-383. Default: True
+    ---
+    Return:
+    massiveOES interface
+    """
 
     # Eventually crop spectrum
     if( autocrop ):
@@ -42,9 +64,30 @@ def prepareInterface( wl, int, autocrop = True ):
     return interface
 
 def params_list( interface ):
+    """
+    List of fit parameters on a interface
+    ---
+    Parameters:
+    interface: massiveOES interface
+    ---
+    Return:
+    list of fit parameters keys
+    """
     return interface.spectra[0]['params'].keys()
 
 def setParam( interface, param, value = None, vary = None, min = None, max = None ):
+    """
+    Set new values for a parameter
+    Arguments with None value are ignored
+    ---
+    Parameters:
+    interface: massiveOES interface
+    param: parameter key
+    value: float, parameters value, default None
+    vary: boolean, if the parameter should be varied during the fit or be fixed, default None
+    min: float, min value for the parameter, default None
+    max: float, max value for the parameter, default None
+    """
     if( value == None ):
         value = interface.spectra[0]['params'][param].value
     if( vary  == None ):
@@ -57,6 +100,16 @@ def setParam( interface, param, value = None, vary = None, min = None, max = Non
     interface.spectra[0]['params'][param].set( value = value, vary = vary, min = min, max = max )
 
 def fit( interface, show_results = True ):
+    """
+    Perform the fit
+    ---
+    Parameters:
+    interface: massiveOES interface
+    show_results: boolean, if the fit results should be displayed, default True
+    ---
+    Return:
+    fit results, in a dictionary struct
+    """
     interface.fit( 0 )
 
     results = fit_pars( interface )
@@ -67,6 +120,15 @@ def fit( interface, show_results = True ):
     return results
 
 def fit_pars( interface ):
+    """
+    Extract the fit parameters
+    ---
+    Parameters:
+    interface: massiveOES interface
+    ---
+    Return:
+    fit results, in a dictionary
+    """
     
     def par( k ):
         if( interface.spectra[0]['params'][k].vary ):
@@ -81,6 +143,18 @@ def fit_pars( interface ):
     return output
 
 def get_fitted_spectrum( interface ):
+    """
+    Extract the fitted spectrum
+    ---
+    Parameters:
+    interface: massiveOES interface
+    ---
+    Return:
+    fitted spectrum, in a dictionary: {
+        'wl': wavelength,
+        'int': fitted intensity
+    }
+    """
 
     sim_spec = massiveOES.puke_spectrum( interface.spectra[0]['params'], sims = interface.simulations )
 
