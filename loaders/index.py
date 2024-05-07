@@ -186,9 +186,9 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Spectroscopy avantes
     if( 'avantes' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.Raw8"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.Raw8"
-        pattern3= ".*[_/\\\\]New Experiment(\d+)\.Raw8"
+        pattern = ".*[_/\\\\](\d+)\.R[aA][wW]8"
+        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.R[aA][wW]8"
+        pattern3= ".*[_/\\\\]New Experiment(\d+)\.R[aA][wW]8"
 
         for file in glob( folder + "/*" ):
 

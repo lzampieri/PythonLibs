@@ -29,6 +29,9 @@ def between( y, x, xlim ):
 
     return np.array(y)[idx]
 
+def between_idx( x, xlim ):
+    return ( x < np.max( xlim ) ) * ( x > np.min( xlim ) )
+
 def mean( array, exclude_nan = False ):
     if( len( array ) == 1 ):
         return array[0]
@@ -49,3 +52,8 @@ def mean( array, exclude_nan = False ):
         std = np.std( unp_n( array ) )
 
     return ufloat( n( mean ), std )
+
+class dotdict(dict):
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__

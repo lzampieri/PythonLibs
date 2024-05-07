@@ -6,7 +6,7 @@ from scipy import ndimage
 from math import floor
 from uncertainties.core import Variable
 
-def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 0.3, high_threshold = 0.5 ):
+def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 0.3, high_threshold = 0.5, expected_sharp = False, return_slopes = False ):
 
     if( len( time ) == 0 ):
         time = np.arange( len( ampl ) )
@@ -17,7 +17,12 @@ def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 
     out_thresh = np.abs( np.max( np.abs( ampl ) ) ) * high_threshold
 
     hits_t = []
-    temp = { 'x': [], 'y': [] }
+    slopes = []
+
+    temp_i = []
+    xs = np.array( time )
+    ys = np.array( ampl )
+
     sign = 0
     for i in range( len( ampl ) ):
         if( ( sign == 0 ) and ( abs( ampl[i] ) > out_thresh ) ):
@@ -26,25 +31,39 @@ def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 
         if( sign != 0 ):
             if( sign * ampl[i] < thresh ):
                 # If below the threshold, i.e. near zero, consider points for linear fit
-                temp['x'].append( time[i] )
-                temp['y'].append( ampl[i] )
+                temp_i.append( i )
             if( - sign * ampl[i] > out_thresh ):
                 # If outside the threshold:
-                if( len( temp['x'] ) > 2 ):
-                    # If enough data
+                fittemp_i = temp_i
+
+                # If the transition is expected to be sharp, include also an extra point after and before
+                if( expected_sharp ):
+                    if( np.min( temp_i ) - 1 > 0 ):
+                        fittemp_i = [ np.min( temp_i ) - 1 ] + fittemp_i
+                    if( np.max( temp_i ) + 1 < len( xs ) - 1 ):
+                        fittemp_i = fittemp_i + [ np.max( temp_i ) + 1 ]
+                
+                # If enough data
+                if( len( fittemp_i ) > 2 or ( len( fittemp_i ) == 2 and expected_sharp ) ):
                     try:
-                        p, cov = np.polyfit( temp['x'], temp['y'], 1, cov=True)
+                        p, cov = np.polyfit( xs[fittemp_i], ys[fittemp_i], 1, cov=True)
                         # Fit to find zero crossings
                         ( m, q ) = uncertainties.correlated_values( p, cov )
                         hits_t.append( - q / m )
+                        slopes.append( m )
                     except:
                         print( f"Skipped a zero estimation due to fit errors!")
-                temp = { 'x': [], 'y': [] }
+                temp_i = []
                 sign = sign * -1
     hits_t = np.array( hits_t )
+    slopes = np.array( slopes )
 
     if( not with_uncertainties ):
-        return unumpy.nominal_values( hits_t )
+        hits_t = unumpy.nominal_values( hits_t )
+
+    if( return_slopes ):
+        return hits_t, slopes
+    
     return hits_t
 
 def frequency( ampl, time = [], with_uncertainties = True ):

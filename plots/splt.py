@@ -17,7 +17,9 @@ _factor = 1
 _markers_list = 'ovsDPX'
 _markers_cycle = itertools.cycle( _markers_list )
 
-def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, seaborn = False ):
+def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, seaborn = False, grid = True ):
+    if( grid ):
+        plt.rcParams.update({"axes.grid" : True})
     plt.figure( figsize = ( numcols * size[0] / _factor, numrows * size[1] / _factor  ) )
     if( seaborn ):
         sns.set_theme()
@@ -108,3 +110,9 @@ def markers_reset():
     global _markers_cycle
     global _markers_list
     _markers_cycle = itertools.cycle( _markers_list )
+def markers_list():
+    global _markers_list
+    return list( _markers_list )
+
+def colors_list():
+    return plt.rcParams['axes.prop_cycle'].by_key()['color']

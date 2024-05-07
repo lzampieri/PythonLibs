@@ -95,3 +95,10 @@ def cartesian_axis( show_h = True, show_v = True ):
 
 def tilt_xlabels():
     plt.xticks( rotation = 30, ha = 'right' )
+
+def draft():
+    xlim = plt.xlim()
+    ylim = plt.ylim()
+    plt.annotate( "DRAFT", [np.mean( xlim ), np.min( ylim ) + 0.2 * np.ptp( ylim )], ha='center', fontsize=80, color = 'red', weight = 'bold' )
+    plt.xlim(xlim)
+    plt.ylim(ylim)

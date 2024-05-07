@@ -4,12 +4,19 @@ from uncertainties import ufloat
 from . import massiveOES
 from collections import OrderedDict
 
-def fitAndGetPars( wl, int ):
-    interface = prepareInterface( wl, int )
+def fitAndGetPars( wl, int, autocrop = True ):
+    interface = prepareInterface( wl, int, autocrop )
     fit( interface )
     return fit_pars( interface )
 
-def prepareInterface( wl, int ):
+def prepareInterface( wl, int, autocrop = True ):
+
+    # Eventually crop spectrum
+    if( autocrop ):
+        idx = ( wl > 360 ) & ( wl < 383 )
+        wl = np.array(wl)[idx]
+        int = np.array(int)[idx]
+        print(f"Data autocropped to the interval 360-383 (from {len(idx)} to {len(int)} datapoints)")
 
     # Init massiveOES interface
     interface = massiveOES.MeasuredSpectra(
@@ -63,11 +70,15 @@ def fit_pars( interface ):
     
     def par( k ):
         if( interface.spectra[0]['params'][k].vary ):
+            if( interface.spectra[0]['params'][k].stderr == None ):
+                return ufloat( interface.spectra[0]['params'][k].value, 0 )
             return ufloat( interface.spectra[0]['params'][k].value, interface.spectra[0]['params'][k].stderr )
         else:
             return interface.spectra[0]['params'][k].value
         
-    return { k : par( k ) for k in interface.spectra[0]['params'].keys() }
+    output = { k : par( k ) for k in interface.spectra[0]['params'].keys() }
+    output['fitted_spectrum'] = get_fitted_spectrum( interface )
+    return output
 
 def get_fitted_spectrum( interface ):
 
