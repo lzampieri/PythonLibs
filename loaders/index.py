@@ -1,16 +1,53 @@
 import pandas as pd
-from . import rspro, nicolet, opus, gc, images, evt, avantes, lecroy, metex, EPR
+from . import rspro, nicolet, opus, gc, images, evt, avantes, lecroy, metex, EPR, thorspectra
 from glob import glob
 import re
 from os.path import exists, dirname
 from standard_imports import *
+from uncertainties import *
+from uncertainties.unumpy import uarray
 
-default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','lecroy','metex', 'teledyne', 'EPR']
+default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','thorspectra','lecroy','metex', 'teledyne', 'EPR', 'mycsv']
 
 def load_index( folder, filename = "index.xlsx" ):
-    dataset = pd.read_excel( folder + "/" + filename ).rename( columns = { 'id': 'ID', 'Id': 'ID' } ).to_dict('records')
+    dataset = pd.read_excel( folder + "/" + filename ).rename( columns = { 'id': 'ID', 'Id': 'ID' } )
 
-    return dataset
+    # Support for ufloat
+    all_cols = dataset.columns
+    for c in all_cols:
+        if( c[-2:] == '_n' and c[:-2] + '_s' in all_cols ):
+            dataset[ c[:-2] ] = uarray( dataset[c], dataset[ c[:-2] + '_s' ] )
+            dataset.drop( columns = [ c, c[:-2] + '_s'], inplace= True )
+            print( f"Cols {c} and {c[:-2] + '_s'} merged in col. {c[:-2]}")
+
+    return dataset.to_dict('records')
+
+def write_index( data, folder, columns, filename = "index.xlsx" ):
+    if( len( data ) == 0 ):
+        pd.DataFrame.from_records( [] ).to_excel( folder + '/' + index_filename, index=False )
+        return
+
+    # Support for ufloat
+    normal_columns = []
+    unc_columns = []
+    for c in columns:
+        assert c in data[0].keys(), f"Column {c} not found in data"
+        if( 'uncertainties' in str( type( data[0][c] ) ) ):
+            unc_columns.append( c )
+        else:
+            normal_columns.append( c )
+
+    index_towrite = []
+
+    for d in data:
+        index_towrite.append({
+            k: ( d[k] if k in d.keys() else "" ) for k in normal_columns
+        })
+        for unc_col in unc_columns:
+            index_towrite[-1][unc_col + '_n'] = n( d[unc_col] )
+            index_towrite[-1][unc_col + '_s'] = s( d[unc_col] )
+
+    pd.DataFrame.from_records( index_towrite ).to_excel( folder + '/' + filename, index=False )
 
 def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     ids = [ d['ID'] for d in dataset ]
@@ -186,9 +223,9 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Spectroscopy avantes
     if( 'avantes' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.R[aA][wW]8"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.R[aA][wW]8"
-        pattern3= ".*[_/\\\\]New Experiment(\d+)\.R[aA][wW]8"
+        pattern = ".*[_/\\\\](\d+)\.R[aAwW][wWdD]8$"
+        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.R[aAwW][wWdD]8$"
+        pattern3= ".*[_/\\\\]New Experiment(\d+)\.R[aAwW][wWdD]8$"
 
         for file in glob( folder + "/*" ):
 
@@ -205,6 +242,28 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
                 ids.append( id )
 
             dataset[ ids.index( id ) ][ 'avantes' ] = avantes.load_raw8( file )
+            dataset[ ids.index( id ) ][ 'evt' ] = evt.read_evt( file )
+
+    # Spectroscopy thorspectra (thorlabs)
+    if( 'thorspectra' in to_load ):
+
+        pattern = ".*[_/\\\\](\d+)\.spf2"
+        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.spf2"
+
+        for file in glob( folder + "/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): matches = re.match( pattern2, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            dataset[ ids.index( id ) ][ 'thorspectra' ] = thorspectra.read_spf2( file )
 
     # Lecroy waveforms
     if( 'lecroy' in to_load ):
@@ -287,6 +346,28 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
 
             dataset[ ids.index( id ) ][ 'EPR' ] = EPR.load( file )
 
+    # Custom made csv, expected to be clear and plain
+    if( 'mycsv' in to_load ):
+
+        pattern = ".*[/\\\\]MC_(\d+)(_[^/\\\\]*)?.my.csv"
+
+        for file in glob( folder + "/*" ):
+            # print(file)
+
+            matches = re.match( pattern, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            data = pd.read_csv( file, index_col=None).to_dict('list')
+            dataset[ ids.index( id ) ][ 'mycsv' ] = { k: np.array( v ) for k, v in data.items() }
+
+
     return dataset
 
 def load_index_and_data( folder, index_filename = "index.xlsx", load_all = False, update_index = False, to_load = default_toload, load_only = [] ):
@@ -312,28 +393,23 @@ def load_index_and_data( folder, index_filename = "index.xlsx", load_all = False
     )
 
     if( update_index and len( index ) > prevs_length ):
-        index_towrite = []
-        for i in index:
-            index_towrite.append({
-                k: ( i[k] if k in i.keys() else "" ) for k in prevs_keys
-            })
-        pd.DataFrame.from_records( index_towrite ).to_excel( folder + '/' + index_filename, index=False )
+        write_index( index, folder, prevs_keys, index_filename )
         print(f"Index uploaded, { len( index ) - prevs_length } rows added, total of { len( index ) } rows loaded")
     else:
         print(f"{ len( index ) } rows loaded")
 
     return index
 
-def add_cols_to_index( data, folder, cols_to_add = [], index_filename = "index.xlsx", verbose = False ):
-    old_index = load_index( folder, index_filename )
+def add_cols_to_index( data, folder, cols_to_add = [], force_update = False, index_filename = "index.xlsx", verbose = False ):
+    old_index = load_index( folder, index_filename,  )
 
     assert len( data ) == len( old_index ), f"The dataset provided have a length different from the actual index! {len( data )} vs {len( old_index )} "
 
     keys = list( old_index[0].keys() )
-    to_update = False
+    to_update = force_update
 
     for k in cols_to_add:
-        if( k not in keys ):
+        if( k not in keys and k in data[0].keys() ):
             keys.append( k )
             to_update = True
     
@@ -345,13 +421,8 @@ def add_cols_to_index( data, folder, cols_to_add = [], index_filename = "index.x
     if( verbose ):
         print( "Adding", len( keys ) - len( list( old_index[0].keys() ) ), "cols" )
 
-    index_towrite = []
-    for d in data:
-        index_towrite.append({
-            k: n( d[k] ) for k in keys
-        })
-
-    pd.DataFrame.from_records( index_towrite ).to_excel( folder + '/' + index_filename, index=False )
+    write_index( data, folder, keys, index_filename )
+        
     if( verbose ):
         print( "Index updated" )
 

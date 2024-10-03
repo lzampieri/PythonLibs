@@ -22,7 +22,10 @@ def plot_with_optional_fmt( x, y, fmt = None, **plot_info ):
         return
     old_plot( x, y, **plot_info )
 
-def unp_plot( x, y = [], *args, as_area = False, avoid_errors = False, xy_sorted = False, normalize = False, **plot_info ):
+def unp_plot( x, y = [], *args, as_area = False, avoid_errors = False, xy_sorted = False, normalize = False, keep_color = False, **plot_info ):
+
+    if( keep_color ):
+        plot_info['color'] = gca().lines[-1].get_color()
 
     if( len( x ) == 0 and len( y ) == 0 ):
         return old_plot( [], [], *args, **plot_info )    
@@ -44,21 +47,21 @@ def unp_plot( x, y = [], *args, as_area = False, avoid_errors = False, xy_sorted
     is_x = 'uncertainties' in str( type( x[0] ) )
 
     if( avoid_errors ):
-        old_plot( unp_n(x), unp_n(y), *args, **plot_info )
-        return
+        return old_plot( unp_n(x), unp_n(y), *args, **plot_info )
+        
 
 
     if( is_x and is_y ):
-        errorbar( unp_n(x), unp_n(y), unp_s(y), unp_s(x), *args, **plot_info )
-        return
+        return errorbar( unp_n(x), unp_n(y), unp_s(y), unp_s(x), *args, **plot_info )
+        
     if( is_y ):
-        errorbar( x, unp_n(y), unp_s(y), *args, **plot_info )
-        return
+        return errorbar( x, unp_n(y), unp_s(y), *args, **plot_info )
+        
     if( is_x ):
-        errorbar( unp_n(x), y, np.zeros_like(y), unp_s(x), *args, **plot_info )
-        return
+        return errorbar( unp_n(x), y, np.zeros_like(y), unp_s(x), *args, **plot_info )
+        
     else:
-        plot_with_optional_fmt( x, y, *args, **plot_info )
+        return plot_with_optional_fmt( x, y, *args, **plot_info )
 
 plot = unp_plot
 

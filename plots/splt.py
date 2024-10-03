@@ -17,9 +17,17 @@ _factor = 1
 _markers_list = 'ovsDPX'
 _markers_cycle = itertools.cycle( _markers_list )
 
+_bar_stack = None
+
+# Change default stuff
+plt.rcParams['legend.loc'] = 'upper right'
+plt.rcParams['errorbar.capsize'] = 2
+
+
 def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, seaborn = False, grid = True ):
     if( grid ):
-        plt.rcParams.update({"axes.grid" : True})
+        plt.rcParams.update({"axes.grid" : True, 'axes.axisbelow':True})
+        # plt.rcParams.
     plt.figure( figsize = ( numcols * size[0] / _factor, numrows * size[1] / _factor  ) )
     if( seaborn ):
         sns.set_theme()
@@ -50,6 +58,9 @@ def next():
     global _plot_params
     global _plot_tred
     global _plot_ca
+    global _bar_stack
+    _bar_stack = None
+
     if( _plot_params[0] * _plot_params[1] == 1 and _plot_params[2] == 1 ):
         pass
     else:
@@ -88,7 +99,7 @@ def lacking( text="" ):
 def set_export_folder( folder ):
     global _export_folder
     _export_folder = folder
-def export( filename, draft = False ):
+def export( filename, draft = False, transparent = True ):
     global _export_folder
 
     if not os.path.exists( _export_folder ):
@@ -98,8 +109,8 @@ def export( filename, draft = False ):
         plt.annotate( "DRAFT", [ 0.5, 0.7 ], ha='center', va='center', color='red', weight='bold', fontsize=40, xycoords= 'figure fraction' )
         plt.annotate( "All panels should be considered draft", [ 0.5, 0.5 ], ha='center', va='center', color='red', fontsize=20, xycoords= 'figure fraction' )
 
-    plt.savefig( _export_folder + "/" + filename + ".png", bbox_inches="tight", dpi=600 )
-    plt.savefig( _export_folder + "/" + filename + ".pdf", bbox_inches="tight" )
+    plt.savefig( _export_folder + "/" + filename + ".png", bbox_inches="tight", dpi=600, transparent = transparent )
+    plt.savefig( _export_folder + "/" + filename + ".pdf", bbox_inches="tight", transparent = transparent )
 
     print(_export_folder + "/" + filename + ".pdf")
 
@@ -116,3 +127,22 @@ def markers_list():
 
 def colors_list():
     return plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+def bar( x, y, stack = False, **args ):
+    global _bar_stack
+
+    if( stack ):
+        if( _bar_stack is None ):
+            print("First bar plot cannot be stacked!")
+        if( len( _bar_stack ) != len( y ) ):
+            print("Only bar with the same size can be stacked!")
+        args['bottom'] = _bar_stack
+    else:
+        _bar_stack = np.zeros_like( y )
+
+    plt.bar( x, y, **args )
+    
+    if( stack ):
+        _bar_stack += y
+    else:
+        _bar_stack = y

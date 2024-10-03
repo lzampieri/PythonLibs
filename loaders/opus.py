@@ -36,3 +36,14 @@ def read_folder( folder, quiet = False, xfact = 1 ):
         print( "Loaded", len( items ), " spectra from ", folder )
 
     return output
+
+def read_file( filename ):
+    datablocks = opusFC.listContents(filename)
+    for datablock in datablocks:
+        if datablock[0] == 'AB':
+            temp = opusFC.getOpusData( str(filename), datablock)
+            return {
+                'id': int( filename[ filename.rfind('.')+1: ] ),
+                'wl': np.array( temp.x ),
+                'A': np.array( temp.y ),
+            }

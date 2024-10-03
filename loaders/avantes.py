@@ -1,5 +1,5 @@
 from . import avantes_backend
-
+import numpy as np
 
 def load_raw8( filename, normalizeOnIntegrationTime = True ):
     """
@@ -23,11 +23,24 @@ def load_raw8( filename, normalizeOnIntegrationTime = True ):
     data = {
         'wl': S.getWavelength(),
         'int_unnormalized': S.getScope(),
+        'dark_unnormalized': S.getDark(),
         'label': S.header['comment'].decode('ascii')[:-1].rstrip('\x00'),
         'header': S.header
     }
 
-    data['int'] = data['int_unnormalized'] / S.header['IntTime'] if normalizeOnIntegrationTime else data['int_unnormalized']
+    normalize = lambda d: d / S.header['IntTime'] if normalizeOnIntegrationTime else d
+
+    data['int'] = normalize( data['int_unnormalized'] )
+
+    if( data['header']['measMode'] > 0 ):
+        print(fr"Avantes spectrum {filename}: dark substracted")
+        data['int_withdark'] = np.copy( data['int'] )
+        data['int_withdark_unnormalized'] = np.copy( data['int_unnormalized'] )
+        data['dark'] = normalize( data['dark_unnormalized'] )
+        data['int'] = data['int_withdark'] - data['dark']
+
+    
+    data['dark'] = data['dark_unnormalized'] / S.header['IntTime'] if normalizeOnIntegrationTime else data['dark_unnormalized']
 
     if( normalizeOnIntegrationTime ):
         print(fr"Avantes spectrum {filename} normalized by a factor of {S.header['IntTime']:.0f} μs")
