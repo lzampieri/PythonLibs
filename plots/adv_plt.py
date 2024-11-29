@@ -18,9 +18,13 @@ def normalized( y ):
 
 def plot_with_optional_fmt( x, y, fmt = None, **plot_info ):
     if( fmt ):
-        old_plot( x, y, fmt, **plot_info )
-        return
-    old_plot( x, y, **plot_info )
+        return old_plot( x, y, fmt, **plot_info )
+    return old_plot( x, y, **plot_info )
+
+def next_color():
+    line = old_plot( [], [] )[0]
+    return line.get_color()
+
 
 def unp_plot( x, y = [], *args, as_area = False, avoid_errors = False, xy_sorted = False, normalize = False, keep_color = False, **plot_info ):
 
@@ -73,11 +77,8 @@ def unp_plot_area( x, y, **plot_info ):
     y_n = unp_n( y ) if is_y else y
     y_s = unp_s( y ) if is_y else np.zeros_like( y )
 
-    if( 'color' not in plot_info ):
-        plot_info['color'] = next( gca()._get_lines.prop_cycler )['color']
-
-    plot_with_optional_fmt( x_n, y_n, **plot_info )
-    fill_between( x_n, y_n - y_s, y_n + y_s, color=plot_info['color'], alpha=0.2, label=None )
+    lines = plot_with_optional_fmt( x_n, y_n, **plot_info )
+    fill_between( x_n, y_n - y_s, y_n + y_s, color=lines[0].get_color(), alpha=0.2, label=None )
 
 def events( evt_xlsx ):
     y = ylim()[0] + 0.1 * np.ptp( plt.ylim() )

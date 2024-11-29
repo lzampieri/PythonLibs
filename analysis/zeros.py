@@ -32,7 +32,7 @@ def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 
             if( sign * ampl[i] < thresh[sign] ):
                 # If below the threshold, i.e. near zero, consider points for linear fit
                 temp_i.append( i )
-            if( - sign * ampl[i] > out_thresh[sign] ):
+            if( - sign * ampl[i] > out_thresh[-sign] ):
                 # If outside the threshold:
                 fittemp_i = temp_i
 
@@ -55,6 +55,9 @@ def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 
                         print( f"Skipped a zero estimation due to fit errors!")
                 temp_i = []
                 sign = sign * -1
+            # if( ampl[i] > 0 ):
+            #     print( f"I'm positive at {time[i]} with {len( temp_i ) } points considered" )
+            #     print( - sign * ampl[i], out_thresh[sign], - sign * ampl[i] > out_thresh[sign] )
     hits_t = np.array( hits_t )
     slopes = np.array( slopes )
 

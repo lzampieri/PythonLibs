@@ -7,7 +7,7 @@ from standard_imports import *
 from uncertainties import *
 from uncertainties.unumpy import uarray
 
-default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','thorspectra','lecroy','metex', 'teledyne', 'EPR', 'mycsv']
+default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','thorspectra','lecroy','metex', 'teledyne', 'EPR', 'visa', 'mycsv']
 
 def load_index( folder, filename = "index.xlsx" ):
     dataset = pd.read_excel( folder + "/" + filename ).rename( columns = { 'id': 'ID', 'Id': 'ID' } )
@@ -55,7 +55,7 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # RSPRO
     if( 'rspro' in to_load ):
 
-        pattern = ".*DSO(\d+)\.CSV"
+        pattern = r".*DSO(\d+)\.CSV"
         for file in glob( folder + "/*" ):
 
             matches = re.match( pattern, file )
@@ -73,8 +73,8 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Nicolet SPA
     if( 'nicolet_SPA' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.SPA"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.SPA"
+        pattern = r".*[_/\\\\](\d+)\.SPA"
+        pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*\.SPA"
         for file in glob( folder + "/*" ):
 
             matches = re.match( pattern, file )
@@ -94,8 +94,8 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Nicolet SRS
     if( 'nicolet_SRS' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.srs$"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.srs$"
+        pattern = r".*[_/\\\\](\d+)\.srs$"
+        pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*\.srs$"
         for file in glob( folder + "/*" ):
 
             matches = re.match( pattern, file )
@@ -115,9 +115,9 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Lausanne FTIR (OPUS)
     if( 'opus' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)_[^/\\\\]+[/\\\\](.*\.0)"
-        pattern2= ".*[_/\\\\](\d+)[/\\\\](.*\.0)"
-        # pattern = ".*[^/\\\\][/\\\\].*\.0"
+        pattern = r".*[_/\\\\](\d+)_[^/\\\\]+[/\\\\](.*\.0)"
+        pattern2= r".*[_/\\\\](\d+)[/\\\\](.*\.0)"
+        # pattern = r".*[^/\\\\][/\\\\].*\.0"
         for subfile in glob( folder + "/**/*.0" ):
 
             matches = re.match( pattern, subfile )
@@ -139,8 +139,8 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # GC AXY
     if( 'gc' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.AXY"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.AXY"
+        pattern = r".*[_/\\\\](\d+)\.AXY"
+        pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*\.AXY"
         for file in glob( folder + "/*" ):
 
             matches = re.match( pattern, file )
@@ -160,8 +160,8 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     gc_series_toimport = {}
     if( 'gc_series' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)[_/\\\\][^/\\\\]*_\d+\.AXY"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*[_/\\\\][^/\\\\]*_\d+\.AXY"
+        pattern = r".*[_/\\\\](\d+)[_/\\\\][^/\\\\]*_\d+\.AXY"
+        pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*[_/\\\\][^/\\\\]*_\d+\.AXY"
         for file in glob( folder + "/*/*" ):
 
             matches = re.match( pattern, file )
@@ -183,8 +183,8 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # JPG images
     if( 'jpg' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.jpg"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.jpg"
+        pattern = r".*[_/\\\\](\d+)\.jpg"
+        pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*\.jpg"
         for file in glob( folder + "/*" ):
 
             matches = re.match( pattern, file )
@@ -203,8 +203,8 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Events indices
     if( 'evt' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.evt.xlsx"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.evt.xlsx"
+        pattern = r".*[_/\\\\](\d+)\.evt\.xlsx"
+        pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*\.evt\.xlsx"
         for file in glob( folder + "/*" ):
 
             matches = re.match( pattern, file )
@@ -223,9 +223,9 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Spectroscopy avantes
     if( 'avantes' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.R[aAwW][wWdD]8$"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.R[aAwW][wWdD]8$"
-        pattern3= ".*[_/\\\\]New Experiment(\d+)\.R[aAwW][wWdD]8$"
+        pattern = r".*[_/\\\\](\d+)\.R[aAwW][wWdD]8$"
+        pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*\.R[aAwW][wWdD]8$"
+        pattern3= r".*[_/\\\\]New Experiment(\d+)\.R[aAwW][wWdD]8$"
 
         for file in glob( folder + "/*" ):
 
@@ -242,13 +242,12 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
                 ids.append( id )
 
             dataset[ ids.index( id ) ][ 'avantes' ] = avantes.load_raw8( file )
-            dataset[ ids.index( id ) ][ 'evt' ] = evt.read_evt( file )
 
     # Spectroscopy thorspectra (thorlabs)
     if( 'thorspectra' in to_load ):
 
-        pattern = ".*[_/\\\\](\d+)\.spf2"
-        pattern2= ".*[_/\\\\](\d+)_[^/\\\\]*\.spf2"
+        pattern = r".*[_/\\\\](\d+)\.spf2$"
+        pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*\.spf2$"
 
         for file in glob( folder + "/*" ):
 
@@ -268,7 +267,7 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Lecroy waveforms
     if( 'lecroy' in to_load ):
 
-        pattern = ".*[/\\\\]S[CD](.)(\d+).TXT"
+        pattern = r".*[/\\\\]S[CD](.)(\d+)\.TXT"
 
         for file in glob( folder + "/*" ):
 
@@ -290,7 +289,7 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Metex data
     if( 'metex' in to_load ):
 
-        pattern = ".*[/\\\\]M(\d+)\.metex\.csv"
+        pattern = r".*[/\\\\]M(\d+)\.metex\.csv"
 
         for file in glob( folder + "/*" ):
             matches = re.match( pattern, file )
@@ -308,7 +307,7 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Lecroy waveforms
     if( 'teledyne' in to_load ):
 
-        pattern = ".*[/\\\\]C(\d+)-[^/\\\\]+-(\d+).csv"
+        pattern = r".*[/\\\\]C(\d+)-[^/\\\\]+-(\d+)\.csv"
 
         for file in glob( folder + "/*" ):
 
@@ -330,7 +329,7 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # EPR raw data
     if( 'EPR' in to_load ):
 
-        pattern = ".*[/\\\\](\d+)([^/\\\\\d][^/\\\\]*)?.EPR"
+        pattern = r".*[/\\\\](\d+)([^/\\\\\d][^/\\\\]*)?\.EPR"
 
         for file in glob( folder + "/*" ):
 
@@ -346,10 +345,30 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
 
             dataset[ ids.index( id ) ][ 'EPR' ] = EPR.load( file )
 
+    # PyVisa made csv, expected to be clear and plain
+    if( 'visa' in to_load ):
+
+        pattern = r".*[/\\\\]osc(\d+)\.visa\.csv"
+
+        for file in glob( folder + "/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+            if( id not in ids ):
+                if( not load_all):
+                    continue
+                dataset.append( { 'ID': id } )
+                ids.append( id )
+
+            data = pd.read_csv( file, index_col=None).to_dict('list')
+            dataset[ ids.index( id ) ][ 'visa' ] = { k: np.array( v ) for k, v in data.items() }
+
     # Custom made csv, expected to be clear and plain
     if( 'mycsv' in to_load ):
 
-        pattern = ".*[/\\\\]MC_(\d+)(_[^/\\\\]*)?.my.csv"
+        pattern = r".*[/\\\\]MC_(\d+)(_[^/\\\\]*)?\.my\.csv"
 
         for file in glob( folder + "/*" ):
             # print(file)

@@ -41,7 +41,7 @@ def read_spf2(file, normalizeOnIntegrationTime = True ):
         'integrationTime_ms': intime
     }
     
-    normalize = lambda d: d / intime if normalizeOnIntegrationTime else d
+    normalize = lambda d: d / intime / 1e3 if normalizeOnIntegrationTime else d
     output['int'] = normalize( output['int_unnormalized'] )
 
     if( normalizeOnIntegrationTime ):

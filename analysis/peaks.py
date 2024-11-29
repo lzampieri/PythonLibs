@@ -5,12 +5,12 @@ def max_fromfit( ys, thresh = 0.1, max_outliners = 2, return_x = False ):
     lev = ys[st] - thresh * np.ptp( ys )
 
     outliners = 0
-    while( outliners < max_outliners ):
+    while( outliners < max_outliners and st > 0 ):
         st -= 1
         if( ys[st] < lev ):
             outliners += 1
     outliners = 0
-    while( outliners < max_outliners ):
+    while( outliners < max_outliners and ed < len(ys) - 1 ):
         ed += 1
         if( ys[ed] < lev ):
             outliners += 1
@@ -41,4 +41,15 @@ def ptp_fromsavgol( ys, polyorder = 3 ):
 
     data = [ np.ptp( savgol_filter( ys, i, polyorder ) ) for i in range( polyorder + 2, polyorder + 25, 2 ) ]
 
-    return mean( data )
+    return ufloat( np.mean( data ), np.std( data ) )
+    
+def rms( x ):
+    return  np.sqrt(np.mean(x**2))
+
+def rms_fromsavgol( ys, polyorder = 3 ):
+    if( polyorder % 2 == 0 ):
+        polyorder = polyorder + 1
+
+    data = [ rms( savgol_filter( ys, i, polyorder ) ) for i in range( polyorder + 2, polyorder + 25, 2 ) ]
+
+    return ufloat( np.mean( data ), np.std( data ) )
