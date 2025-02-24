@@ -25,10 +25,11 @@ def load_raw8( filename, normalizeOnIntegrationTime = True ):
         'int_unnormalized': S.getScope(),
         'dark_unnormalized': S.getDark(),
         'label': S.header['comment'].decode('ascii')[:-1].rstrip('\x00'),
+        'int_time_s': S.header['IntTime'] / 1e3,
         'header': S.header
     }
 
-    normalize = lambda d: d / S.header['IntTime'] if normalizeOnIntegrationTime else d
+    normalize = lambda d: d /( S.header['IntTime'] / 1e3 ) if normalizeOnIntegrationTime else d
 
     data['int'] = normalize( data['int_unnormalized'] )
 
@@ -40,9 +41,7 @@ def load_raw8( filename, normalizeOnIntegrationTime = True ):
         data['int'] = data['int_withdark'] - data['dark']
 
     
-    data['dark'] = data['dark_unnormalized'] / S.header['IntTime'] if normalizeOnIntegrationTime else data['dark_unnormalized']
-
     if( normalizeOnIntegrationTime ):
-        print(fr"Avantes spectrum {filename} normalized by a factor of {S.header['IntTime']:.0f} μs")
+        print(fr"Avantes spectrum {filename} normalized by a factor of {S.header['IntTime']/1e3:.03f} s")
 
     return data

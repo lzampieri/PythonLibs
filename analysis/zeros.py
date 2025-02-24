@@ -1,10 +1,45 @@
 import numpy as np
 import uncertainties
-from uncertainties import unumpy
-from standard_imports import mean, n
+from uncertainties import unumpy, ufloat
 from scipy import ndimage
 from math import floor
 from uncertainties.core import Variable
+
+def force_ufloat( x ):
+    return x if 'uncertainties' in str( type( x ) ) else ufloat( x, 0 )
+
+@np.vectorize
+def n( x ):
+    if( isinstance( x, list ) ):
+        return [ n( xi ) for xi in x ]
+    return x.n if 'uncertainties' in str( type( x ) ) else x
+
+@np.vectorize
+def s( x ):
+    if( isinstance( x, list ) ):
+        return [ s( xi ) for xi in x ]
+    return x.s if 'uncertainties' in str( type( x ) ) else 0
+
+def mean( array, exclude_nan = False ):
+    if( len( array ) == 1 ):
+        return force_ufloat( array[0] )
+    if( exclude_nan ):
+        array = np.array( array )[ ~ np.isnan( array ) ]
+    mean = np.mean( array )
+    compatible = True
+    for i1, a1 in enumerate( array ):
+        for i2, a2 in enumerate( array ):
+            if( i1 < i2 ):
+                continue
+            if( abs( n( a1 ) - n( a2 ) ) > 3 * np.sqrt( s( a1 )**2 + s( a2 )**2 ) ):
+                compatible = False
+                break
+    if( compatible ):
+        std = np.sqrt( np.sum( s( array )**2 ) / len( array )**2 )
+    else:
+        std = np.std( n( array ), ddof = 1 )
+
+    return ufloat( n( mean ), std )
 
 def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 0.3, high_threshold = 0.5, expected_sharp = False, return_slopes = False ):
 
@@ -84,13 +119,17 @@ def period( ampl, time = [], with_uncertainties = True ):
 
 def phase_t( ampl, time = [] ):
     # Find a odd number of zero crossings
-    hits_t = zero_crossings( ampl, time )
+    hits_t, slopes = zero_crossings( ampl, time, return_slopes = True )
     if( len( hits_t ) % 2 == 0 ):
         hits_t = hits_t[:-1]
 
     # Estimate period:
-    T = mean( hits_t[1:] - hits_t[:-1] )
-    phase_t = mean( hits_t - T * np.arange( len( hits_t ) ) )
+    T = mean( hits_t[1:] - hits_t[:-1] ) * 2
+    phase_t = mean( hits_t - T * 0.5 * np.arange( len( hits_t ) ) )
+
+    # If is starts
+    if( slopes[0] < 0 ): # If it starts falling, add half a period
+        phase_t += T.n / 2
 
     while( phase_t.n < 0 ):
         phase_t += T.n

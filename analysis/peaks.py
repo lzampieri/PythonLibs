@@ -1,6 +1,6 @@
 from standard_imports import *
 
-def max_fromfit( ys, thresh = 0.1, max_outliners = 2, return_x = False ):
+def max_fromfit( ys, thresh = 0.1, max_outliners = 2, return_yandx = False, xs = None ):
     st = ed = np.argmax( ys )
     lev = ys[st] - thresh * np.ptp( ys )
 
@@ -27,13 +27,16 @@ def max_fromfit( ys, thresh = 0.1, max_outliners = 2, return_x = False ):
     # plt.plot( [x_max], [np.polyval( fit, x_max )], 'o' )
     
     # print( st, x_max, ed )
-    if( return_x ):
+    if( return_yandx ):
+        if( xs is not None ):
+            assert len( xs ) == len( ys )
+            return np.polyval( fit, x_max ), np.interp( x_max + st, np.arange( len( ys ) ), xs )
         return np.polyval( fit, x_max ), x_max + st
     return np.polyval( fit, x_max )
 
 
-def min_fromfit( ys, thresh = 0.1, max_outliners = 2, return_x = False ):
-    return -max_fromfit( - np.array(ys), thresh, max_outliners, return_x )
+def min_fromfit( ys, thresh = 0.1, max_outliners = 2, return_x = False, xs = None  ):
+    return -max_fromfit( - np.array(ys), thresh, max_outliners, return_x, xs  )
 
 def ptp_fromsavgol( ys, polyorder = 3 ):
     if( polyorder % 2 == 0 ):

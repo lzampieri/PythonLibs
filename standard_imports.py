@@ -1,6 +1,5 @@
 import numpy as np
 from plots import adv_plt as plt
-import seaborn as sns
 import pandas as pd
 from uncertainties import *
 from uncertainties.unumpy import nominal_values as unp_n, uarray
@@ -56,6 +55,8 @@ def mean( array, exclude_nan = False ):
             if( abs( n( a1 ) - n( a2 ) ) > 3 * sqrt( s( a1 )**2 + s( a2 )**2 ) ):
                 compatible = False
                 break
+        if( compatible == False ):
+            break
     if( compatible ):
         std = sqrt( np.sum( s( array )**2 ) / len( array )**2 )
     else:

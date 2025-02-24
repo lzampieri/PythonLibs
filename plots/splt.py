@@ -6,16 +6,12 @@ from matplotlib import cm
 from math import ceil
 import os
 import seaborn as sns
-import itertools
 
 _plot_params = 0
 _plot_tred = False
 _plot_ca = None
 _export_folder = "exports"
 _factor = 1
-
-_markers_list = 'ovsDPX'
-_markers_cycle = itertools.cycle( _markers_list )
 
 _bar_stack = None
 
@@ -113,20 +109,6 @@ def export( filename, draft = False, transparent = True ):
     plt.savefig( _export_folder + "/" + filename + ".pdf", bbox_inches="tight", transparent = transparent )
 
     print(_export_folder + "/" + filename + ".pdf")
-
-def marker():
-    global _markers_cycle
-    return _markers_cycle.__next__()
-def markers_reset():
-    global _markers_cycle
-    global _markers_list
-    _markers_cycle = itertools.cycle( _markers_list )
-def markers_list():
-    global _markers_list
-    return list( _markers_list )
-
-def colors_list():
-    return plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 def bar( x, y, stack = False, **args ):
     global _bar_stack

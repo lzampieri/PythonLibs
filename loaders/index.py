@@ -7,7 +7,7 @@ from standard_imports import *
 from uncertainties import *
 from uncertainties.unumpy import uarray
 
-default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','thorspectra','lecroy','metex', 'teledyne', 'EPR', 'visa', 'mycsv']
+default_toload = [ 'rspro','nicolet_SPA','nicolet_SRS','opus','gc','gc_series','jpg','evt','avantes','thorspectra','lecroy','metex', 'teledyne', 'teledyne2', 'EPR', 'visa', 'mycsv']
 
 def load_index( folder, filename = "index.xlsx" ):
     dataset = pd.read_excel( folder + "/" + filename ).rename( columns = { 'id': 'ID', 'Id': 'ID' } )
@@ -325,6 +325,30 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
             if( 'teledyne' not in dataset[ ids.index( id ) ].keys() ):
                 dataset[ ids.index( id ) ][ 'teledyne' ] = {}
             dataset[ ids.index( id ) ][ 'teledyne' ][ channel ] = lecroy.load( file )
+
+    # Teledyne oscilloscope waveforms
+    if( 'teledyne2' in to_load ):
+
+        pattern = r".*SDS(\d+)\.csv"
+        for file in glob( folder + "/*" ):
+
+            matches = re.match( pattern, file )
+            if( not matches ): continue
+
+            id = int( matches.groups()[0] )
+
+            try:
+                dds = rspro.load( file )
+                if( id not in ids ):
+                    if( not load_all):
+                        continue
+                    dataset.append( { 'ID': id } )
+                    ids.append( id )
+
+                dataset[ ids.index( id ) ][ 'teledyne2' ] = dds
+            except UnicodeDecodeError:
+                if( id in ids or load_all ):
+                    print(f"{file} skipped due to malformat (unicode error)")
 
     # EPR raw data
     if( 'EPR' in to_load ):

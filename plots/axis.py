@@ -93,8 +93,8 @@ def cartesian_axis( show_h = True, show_v = True ):
     plt.xlim(xlim)
     plt.ylim(ylim)
 
-def tilt_xlabels():
-    plt.xticks( rotation = 30, ha = 'right' )
+def tilt_xlabels( angle = 30 ):
+    plt.xticks( rotation = angle, ha = 'right' if angle <= 45 else 'center' )
 
 def draft():
     xlim = plt.xlim()

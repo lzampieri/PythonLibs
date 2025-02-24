@@ -1,13 +1,43 @@
 import numpy as np
 from matplotlib.pyplot import *
 from uncertainties import *
+import itertools
 
 old_plot = plot
+
+# Utils for uncertainties
 
 def unp_n( x ):
     return np.array( [ xx.n for xx in x ] if 'uncertainties' in str( type( x[0] ) ) else x )
 def unp_s( x ):
     return np.array( [ xx.s for xx in x ] if 'uncertainties' in str( type( x[0] ) ) else x )
+
+# Utils for markers
+_markers_list = 'ovsDPX'
+_markers_cycle = itertools.cycle( _markers_list )
+
+def next_marker():
+    global _markers_cycle
+    return _markers_cycle.__next__()
+def reset_markers():
+    global _markers_cycle
+    global _markers_list
+    _markers_cycle = itertools.cycle( _markers_list )
+def list_markers():
+    global _markers_list
+    return list( _markers_list )
+
+# Utilities for colors
+def next_color():
+    line = old_plot( [], [] )[0]
+    return line.get_color()
+def last_color():
+    return gca().lines[-1].get_color()
+def list_colors():
+    return rcParams['axes.prop_cycle'].by_key()['color']
+
+
+# Utils for data treatment
 
 def sorted( x, y ):
     idx = np.argsort( x )
@@ -21,12 +51,15 @@ def plot_with_optional_fmt( x, y, fmt = None, **plot_info ):
         return old_plot( x, y, fmt, **plot_info )
     return old_plot( x, y, **plot_info )
 
-def next_color():
-    line = old_plot( [], [] )[0]
-    return line.get_color()
-
+# Utils for plotting
 
 def unp_plot( x, y = [], *args, as_area = False, avoid_errors = False, xy_sorted = False, normalize = False, keep_color = False, **plot_info ):
+
+    # Single-point plot
+    if( not callable( getattr( x, '__len__', None ) ) ):
+        x = [x]
+    if( not callable( getattr( y, '__len__', None ) ) ):
+        y = [y]
 
     if( keep_color ):
         plot_info['color'] = gca().lines[-1].get_color()
