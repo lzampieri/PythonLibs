@@ -5,7 +5,6 @@ import numpy as np
 from matplotlib import cm
 from math import ceil
 import os
-import seaborn as sns
 
 _plot_params = 0
 _plot_tred = False
@@ -20,13 +19,11 @@ plt.rcParams['legend.loc'] = 'upper right'
 plt.rcParams['errorbar.capsize'] = 2
 
 
-def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, seaborn = False, grid = True ):
+def init( numrows = 1, numcols = 1, init = False, size = (6,4), tred = False, grid = True ):
     if( grid ):
         plt.rcParams.update({"axes.grid" : True, 'axes.axisbelow':True})
         # plt.rcParams.
     plt.figure( figsize = ( numcols * size[0] / _factor, numrows * size[1] / _factor  ) )
-    if( seaborn ):
-        sns.set_theme()
     global _plot_params
     global _plot_tred
     _plot_params = [ int( numrows ), int( numcols ), 0 ]
@@ -42,8 +39,6 @@ def set_scale_factor_raw( new_factor ):
     # sns.set_context("notebook")
     # sns.set_context("talk")
     # sns.set_context("poster")
-def enable_seaborn():
-    sns.set_theme()
 def init_bytot( numtot, cols = 4, **args ):
     if( numtot < cols ):
         return init( 1, numtot, **args )

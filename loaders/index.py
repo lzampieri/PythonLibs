@@ -223,13 +223,15 @@ def load_data( dataset, folder, load_all = False, to_load = default_toload ):
     # Spectroscopy avantes
     if( 'avantes' in to_load ):
 
+        pattern0= r".*[/\\\\](\d+)_[^/\\\\]*\.R[aAwW][wWdD]8$"
         pattern = r".*[_/\\\\](\d+)\.R[aAwW][wWdD]8$"
         pattern2= r".*[_/\\\\](\d+)_[^/\\\\]*\.R[aAwW][wWdD]8$"
         pattern3= r".*[_/\\\\]New Experiment(\d+)\.R[aAwW][wWdD]8$"
 
         for file in glob( folder + "/*" ):
 
-            matches = re.match( pattern, file )
+            matches = re.match( pattern0, file )
+            if( not matches ): matches = re.match( pattern, file )
             if( not matches ): matches = re.match( pattern2, file )
             if( not matches ): matches = re.match( pattern3, file )
             if( not matches ): continue

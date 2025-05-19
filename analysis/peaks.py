@@ -18,8 +18,14 @@ def max_fromfit( ys, thresh = 0.1, max_outliners = 2, return_yandx = False, xs =
     fit = np.polyfit( range( ed-st ), ys[st:ed], 2 )
     x_max = - fit[1] / 2 / fit[0]
     if( x_max < 0 or x_max > ed - st ):
-        print( "Fit failed! Using average" )
-        return np.mean( ys[ st - ed ] )
+        print( "Fit failed! Using argmax" )
+        if( return_yandx ):
+            i = np.argmax( ys[st:ed] )
+            if( xs is not None ):
+                assert len( xs ) == len( ys )
+                return ys[st:ed][i], xs[st:ed][i]
+            return ys[st:ed][i], st + i
+        return ys[st:ed][i]
     
     # xs = range( ed-st )
     # plt.plot( xs, ys[st:ed], 'o' )

@@ -36,6 +36,8 @@ def compute_lissajous( time, voltage_minus_C_voltage, charge, crop = True, N_per
         time = time[ idx ]
         voltage = voltage[ idx ]
         charge = charge[ idx ]
+    else:
+        period = ( time[-1] - time[0] ) / N_periods
 
     # Compute the integral
     integral = np.trapz( voltage, charge ) / N_periods
@@ -59,7 +61,7 @@ def compute_lissajous( time, voltage_minus_C_voltage, charge, crop = True, N_per
 
         integral = ufloat(
             n( integral ),
-            np.sqrt( s( integral ) ** 2 + np.std( integrals ) ** 2 )
+            np.sqrt( s( integral ) ** 2 + np.std( n( integral ) ) ** 2 )
         )
 
     # Compute power

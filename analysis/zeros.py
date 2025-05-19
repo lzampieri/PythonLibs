@@ -4,6 +4,7 @@ from uncertainties import unumpy, ufloat
 from scipy import ndimage
 from math import floor
 from uncertainties.core import Variable
+from standard_imports import mean
 
 def force_ufloat( x ):
     return x if 'uncertainties' in str( type( x ) ) else ufloat( x, 0 )
@@ -41,7 +42,7 @@ def mean( array, exclude_nan = False ):
 
     return ufloat( n( mean ), std )
 
-def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 0.3, high_threshold = 0.5, expected_sharp = False, return_slopes = False ):
+def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 0.3, high_threshold = 0.5, expected_sharp = False, return_slopes = False, ignore_below = 2 ):
 
     if( len( time ) == 0 ):
         time = np.arange( len( ampl ) )
@@ -79,7 +80,7 @@ def zero_crossings( ampl, time = [], with_uncertainties = True, low_threshold = 
                         fittemp_i = fittemp_i + [ np.max( temp_i ) + 1 ]
                 
                 # If enough data
-                if( len( fittemp_i ) > 2 or ( len( fittemp_i ) == 2 and expected_sharp ) ):
+                if( len( fittemp_i ) > ignore_below or ( len( fittemp_i ) == 2 and expected_sharp ) ):
                     try:
                         p, cov = np.polyfit( xs[fittemp_i], ys[fittemp_i], 1, cov=True)
                         # Fit to find zero crossings
@@ -115,7 +116,7 @@ def period( ampl, time = [], with_uncertainties = True ):
 
     differences_t = hits_t[1:] - hits_t[:-1]
 
-    return np.mean( differences_t ) * 2
+    return mean( differences_t ) * 2
 
 def phase_t( ampl, time = [] ):
     # Find a odd number of zero crossings

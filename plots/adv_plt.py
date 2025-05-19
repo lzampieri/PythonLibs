@@ -28,8 +28,8 @@ def list_markers():
     return list( _markers_list )
 
 # Utilities for colors
-def next_color():
-    line = old_plot( [], [] )[0]
+def next_color( label = None ):
+    line = old_plot( [], [], label = label )[0]
     return line.get_color()
 def last_color():
     return gca().lines[-1].get_color()

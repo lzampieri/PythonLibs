@@ -42,6 +42,6 @@ def load_raw8( filename, normalizeOnIntegrationTime = True ):
 
     
     if( normalizeOnIntegrationTime ):
-        print(fr"Avantes spectrum {filename} normalized by a factor of {S.header['IntTime']/1e3:.03f} s")
+        print(fr"Avantes spectrum {filename} normalized by a factor of {S.header['IntTime']/1e3:.06f} s")
 
     return data
